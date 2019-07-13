@@ -706,6 +706,7 @@ struct mne *mp;
                 rf = 0;
 
         switch (mchtyp) {
+	case X_8080:
         case X_Z80:
                 if (rf > S_CPU)
                         rf = 0;
@@ -778,10 +779,14 @@ struct mne *mp;
         switch (rf) {
 
         case S_INH1:
+		if (mchtyp == X_8080 && op == 0xD9)	/* EXX */
+			aerr();
                 outab(op);
                 break;
 
         case S_INH2:
+		if (mchtyp == X_8080)
+			aerr();
                 outab(0xED);
                 outab(op);
                 break;
@@ -816,6 +821,8 @@ struct mne *mp;
                  * push/pop bc/de/hl/ix/iy      (not sp)
                  */
                 if ((v1 = admode(R16)) != 0 && (v1 &= 0xFF) != SP) {
+			if (mchtyp == X_8080 && (v1 == IX || v1 == IY))
+				aerr();
                         if (v1 != gixiy(v1)) {
                                 outab(op+0x20);
                                 break;
@@ -850,6 +857,8 @@ struct mne *mp;
                 break;
 
         case S_IM:
+		if (mchtyp == X_8080)
+			aerr();
                 expr(&e1, 0);
                 abscheck(&e1);
                 if (e1.e_addr > 2) {
@@ -1014,8 +1023,11 @@ struct mne *mp;
                          * op  hl,sp
                          */
                         if ((v1 == HL) && (v2 <= SP)) {
-                                if (rf != S_ADD)
+                                if (rf != S_ADD) {
+					if (mchtyp == X_8080)
+						aerr();
                                         outab(0xED);
+				}
                                 outab(op | (v2<<4));
                                 break;
                         }
@@ -1280,6 +1292,8 @@ struct mne *mp;
                         if (gixiy(v1) == HL) {
                                 outab(0x2A);
                         } else {
+				if (mchtyp == X_8080)
+					aerr();
                                 outab(0xED);
                                 outab(0x4B | (v1<<4));
                         }
@@ -1298,6 +1312,8 @@ struct mne *mp;
                         if (gixiy(v2) == HL) {
                                 outab(0x22);
                         } else {
+				if (mchtyp == X_8080)
+					aerr();
                                 outab(0xED);
                                 outab(0x43 | (v2<<4));
                         }
@@ -1348,6 +1364,8 @@ struct mne *mp;
                  * ld  I,a
                  */
                 if ((t1 == S_R8X) && (t2 == S_R8) && (v2 == A)) {
+			if (mchtyp == X_8080)
+				aerr();
                         outab(0xED);
                         outab(v1);
                         break;
@@ -1365,6 +1383,8 @@ struct mne *mp;
                  * ld  a,I
                  */
                 if ((t1 == S_R8) && (v1 == A) && (t2 == S_R8X)) {
+			if (mchtyp == X_8080)
+				aerr();
                         outab(0xED);
                         outab(v2|0x10);
                         break;
@@ -1549,6 +1569,8 @@ struct mne *mp;
                          * out  (c),r   [out  (bc),r]
                          */
                         if (t2 == S_IDC) {
+				if (mchtyp == X_8080)
+					aerr();
                                 outab(0xED);
                                 outab(((rf == S_IN) ? 0x40 : 0x41) + (v1<<3));
                                 break;
@@ -1622,6 +1644,8 @@ struct mne *mp;
                 /*
                  * jr  cc,e
                  */
+		if (mchtyp == X_8080)
+			aerr();
                 if (rf == S_JR && (v1 = admode(CND)) != 0) {
                         if ((v1 &= 0xFF) <= 0x03) {
                                 op += (v1+1)<<3;
@@ -2059,6 +2083,7 @@ struct mne *mp;
                         }
                         break;
                 case X_Z80:
+		case X_8080:
                         opcycles = z80pg1[cb[0] & 0xFF];
                         while ((opcycles & OPCY_NONE) && (opcycles & OPCY_MASK)) {
                                 switch (opcycles) {
@@ -2145,6 +2170,8 @@ int f;
 {
         int t1;
 
+	if (pop && mchtyp == X_8080)
+		aerr();
         if ((t1 = esp->e_mode) == S_R8) {
                 if (pop)
                         outab(pop);

@@ -162,6 +162,7 @@
 #define	X_HD64	1
 #define	X_ZXN	2
 #define	X_EZ80	3
+#define	X_8080	4
 
 /*
  * HD64180 Instructions

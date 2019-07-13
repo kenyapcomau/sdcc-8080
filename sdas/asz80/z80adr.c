@@ -29,6 +29,8 @@
 #include "asxxxx.h"
 #include "z80.h"
 
+extern int mchtyp;
+
 /*
  * Read an address specifier. Pack the
  * address information into the supplied
@@ -59,6 +61,8 @@ struct expr *esp;
                         mode = S_INDB;
                 } else
                 if ((indx = admode(R16)) != 0) {
+			if (mchtyp == X_8080 && ((indx&0xFF)==IX || (indx&0xFF)==IY))
+				aerr();
                         mode = S_INDR;
                 } else
                 if ((indx = admode(R8X)) != 0) {
@@ -86,9 +90,13 @@ struct expr *esp;
                         mode = S_R8;
                 } else
                 if ((indx = admode(R16)) != 0) {
+			if (mchtyp == X_8080 && ((indx&0xFF)==IX || (indx&0xFF)==IY))
+				aerr();
                         mode = S_R16;
                 } else
                 if ((indx = admode(R8X)) != 0) {
+			if (mchtyp == X_8080)
+				aerr();
                         mode = S_R8X;
                 } else
                 if ((indx = admode(R8U1)) != 0) {
@@ -98,6 +106,8 @@ struct expr *esp;
                         mode = S_R8U2;
                 } else
                 if ((indx = admode(R16X)) != 0) {
+			if (mchtyp == X_8080 && ((indx&0xFF)==IX || (indx&0xFF)==IY))
+				aerr();
                         mode = S_R16X;
                 } else
                 if ((indx = admode(R8MB)) != 0) {
@@ -114,7 +124,7 @@ struct expr *esp;
                 }
                 if ((c = getnb()) == LFIND) {
                         if ((indx=admode(R16))!=0
-                                && ((indx&0xFF)==IX || (indx&0xFF)==IY)) {
+                                && mchtyp != X_8080 && ((indx&0xFF)==IX || (indx&0xFF)==IY)) {
                                 esp->e_mode = S_INDR + (indx&0xFF);
                         } else {
                                 aerr();

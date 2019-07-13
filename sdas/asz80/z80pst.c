@@ -141,6 +141,7 @@ struct  mne     mne[] = {
     {   NULL,   ".z180",        S_CPU,          0,      X_HD64  },
     {   NULL,   ".zxn",         S_CPU,          0,      X_ZXN   },
     {   NULL,   ".ez80",        S_CPU,          0,      X_EZ80  },
+    {   NULL,   ".8080",        S_CPU,          0,      X_8080  },
 
 	/* z80 / hd64180 */
 

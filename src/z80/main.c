@@ -63,6 +63,10 @@ static char _gbz80_defaultRules[] = {
 #include "peeph-gbz80.rul"
 };
 
+static char _i80_defaultRules[] = {
+#include "peeph.rul"
+#include "peeph-i80.rul"
+};
 
 
 Z80_OPTS z80_opts;
@@ -90,6 +94,18 @@ static OPTION _gbz80_options[] = {
   {0, OPTION_CONST_SEG,       &options.const_seg, "<name> use this name for the const segment", CLAT_STRING},
   {0, OPTION_DATA_SEG,        &options.data_seg, "<name> use this name for the data segment", CLAT_STRING},
   {0, OPTION_NO_STD_CRT0,     &options.no_std_crt0, "For the z80/gbz80 do not link default crt0.rel"},
+  {0, NULL}
+};
+
+static OPTION _i80_options[] = {
+  {0, OPTION_CALLEE_SAVES_BC, &z80_opts.calleeSavesBC, "Force a called function to always save BC"},
+  {0, OPTION_ASM,             NULL, "Define assembler name (rgbds/asxxxx/isas/z80asm)"},
+  {0, OPTION_CODE_SEG,        &options.code_seg, "<name> use this name for the code segment", CLAT_STRING},
+  {0, OPTION_CONST_SEG,       &options.const_seg, "<name> use this name for the const segment", CLAT_STRING},
+  {0, OPTION_DATA_SEG,        &options.data_seg, "<name> use this name for the data segment", CLAT_STRING},
+  {0, OPTION_NO_STD_CRT0,     &options.no_std_crt0, "For the z80/gbz80 do not link default crt0.rel"},
+  {0, OPTION_OLDRALLOC,       &options.oldralloc, "Use old register allocator"},
+  {0, OPTION_EMIT_EXTERNS,    NULL, "Emit externs list in generated asm"},
   {0, NULL}
 };
 
@@ -157,6 +173,7 @@ static char *_keywordstlcs90[] = {
 extern PORT z80_port;
 extern PORT r2k_port;
 extern PORT gbz80_port;
+extern PORT i80_port;
 
 #include "mappings.i"
 
@@ -215,6 +232,13 @@ _ez80_z80_init (void)
 {
   z80_opts.sub = SUB_EZ80_Z80;
   asm_addTree (&_asxxxx_z80);
+}
+
+static void
+_i80_init (void)
+{
+  z80_opts.sub = SUB_I80;
+  asm_addTree (&_asxxxx_i80);
 }
 
 static void
@@ -682,7 +706,7 @@ static void
 _setDefaultOptions (void)
 {
   options.nopeep = 0;
-  options.stackAuto = 1;
+  options.stackAuto = !IS_I80;
   /* first the options part */
   options.intlong_rent = 1;
   options.float_rent = 1;
@@ -871,6 +895,7 @@ static const char *const _libs_r3ka[] = { "r3ka", NULL, };
 static const char *const _libs_tlcs90[] = { "tlcs90", NULL, };
 static const char *const _libs_gb[] = { "gbz80", NULL, };
 static const char *const _libs_ez80_z80[] = { "ez80_z80", NULL, };
+static const char *const _libs_i80[] = { "i80", NULL, };
 
 /* Globals */
 PORT z80_port =
@@ -1466,6 +1491,133 @@ PORT gbz80_port =
   _gbz80_init,
   _parseOptions,
   _gbz80_options,
+  NULL,
+  _finaliseOptions,
+  _setDefaultOptions,
+  z80_assignRegisters,
+  _getRegName,
+  _getRegByName,
+  NULL,
+  _keywordsgb,
+  0,                            /* no assembler preamble */
+  NULL,                         /* no genAssemblerEnd */
+  0,                            /* no local IVT generation code */
+  0,                            /* no genXINIT code */
+  NULL,                         /* genInitStartup */
+  _reset_regparm,
+  _reg_parm,
+  _process_pragma,
+  NULL,
+  _hasNativeMulFor,
+  hasExtBitOp,                  /* hasExtBitOp */
+  oclsExpense,                  /* oclsExpense */
+  TRUE,
+  TRUE,                         /* little endian */
+  0,                            /* leave lt */
+  0,                            /* leave gt */
+  1,                            /* transform <= to ! > */
+  1,                            /* transform >= to ! < */
+  1,                            /* transform != to !(a == b) */
+  0,                            /* leave == */
+  FALSE,                        /* Array initializer support. */
+  0,                            /* no CSE cost estimation yet */
+  NULL,                         /* no builtin functions */
+  GPOINTER,                     /* treat unqualified pointers as "generic" pointers */
+  1,                            /* reset labelKey to 1 */
+  1,                            /* globals & local statics allowed */
+  5,                            /* Number of registers handled in the tree-decomposition-based register allocator in SDCCralloc.hpp */
+  PORT_MAGIC
+};
+
+PORT i80_port =
+{
+  TARGET_ID_I80,
+  "i80",
+  "Intel 8080",           /* Target name */
+  NULL,
+  {
+    glue,
+    FALSE,
+    NO_MODEL,
+    NO_MODEL,
+    NULL,                       /* model == target */
+  },
+  {                             /* Assembler */
+    _z80AsmCmd,
+    NULL,
+    "-plosgffwy",               /* Options with debug */
+    "-plosgffw",                /* Options without debug */
+    0,
+    ".asm",
+    NULL                        /* no do_assemble function */
+  },
+  {                             /* Linker */
+    _z80LinkCmd,                //NULL,
+    NULL,                       //LINKCMD,
+    NULL,
+    ".rel",
+    1,
+    _crt,                       /* crt */
+    _libs_i80,                  /* libs */
+  },
+  {                             /* Peephole optimizer */
+    _i80_defaultRules,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    z80symmParmStack,
+  },
+  /* Sizes: char, short, int, long, long long, near ptr, far ptr, gptr, func ptr, banked func ptr, bit, float */
+  { 1, 2, 2, 4, 8, 2, 2, 2, 2, 2, 1, 4 },
+  /* tags for generic pointers */
+  { 0x00, 0x40, 0x60, 0x80 },   /* far, near, xstack, code */
+  {
+    "XSEG",
+    "STACK",
+    "CODE",
+    "DATA",
+    NULL,                       /* idata */
+    NULL,                       /* pdata */
+    NULL,                       /* xdata */
+    NULL,                       /* bit */
+    "RSEG",
+    "GSINIT",
+    NULL,                       /* overlay */
+    "GSFINAL",
+    "HOME",
+    NULL,                       /* xidata */
+    NULL,                       /* xinit */
+    NULL,                       /* const_name */
+    "CABS (ABS)",               /* cabs_name */
+    "DABS (ABS)",               /* xabs_name */
+    NULL,                       /* iabs_name */
+    NULL,                       /* name of segment for initialized variables */
+    NULL,                       /* name of segment for copies of initialized variables in code space */
+    NULL,
+    NULL,
+    1,                          /* CODE is read-only */
+    1                           /* No fancy alignments supported. */
+  },
+  { NULL, NULL },
+  { -1, 0, 0, 2, 0, 4, 0 },
+  { -1, FALSE },
+  { z80_emitDebuggerSymbol },
+  {
+    256,                        /* maxCount */
+    3,                          /* sizeofElement */
+    {6, 7, 8},                  /* sizeofMatchJump[] - Assumes operand allocated to registers */
+    {6, 9, 15},                 /* sizeofRangeCompare[] - Assumes operand allocated to registers*/
+    1,                          /* sizeofSubtract - Assumes use of a singel inc or dec */
+    9,                          /* sizeofDispatch - Assumes operand allocated to register e or c*/
+  },
+  "_",
+  _i80_init,
+  _parseOptions,
+  _i80_options,
   NULL,
   _finaliseOptions,
   _setDefaultOptions,

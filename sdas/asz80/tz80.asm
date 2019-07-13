@@ -1,5 +1,7 @@
 	.title	Test of Z80 / HD64180 assembler
 
+	.8080
+
 	offset	=	0x55		;arbitrary constants
 	n	=	0x20
 	nn	=	0x0584

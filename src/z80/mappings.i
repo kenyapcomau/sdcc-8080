@@ -429,6 +429,51 @@ static const ASM_MAPPING _z80asm_z80_mapping[] = {
     { NULL, NULL }
 };
 
+static const ASM_MAPPING _asxxxx_i80_mapping[] = {
+    /* We want to prepend the _ */
+    { "area", ".area _%s" },
+    { "areacode", ".area _%s" },
+    { "areadata", ".area _%s" },
+    { "areahome", ".area _%s" },
+    { "functionlabeldef", "%s:" },
+    { "globalfunctionlabeldef", "%s::" },
+    { "*hl", "(hl)" },
+    { "di", "di" },
+    { "ei", "ei" },
+    /*{ "ldahli", "ldi\ta, (hl)" }, use when assembler update is complete*/
+    {"ldahli", "ld\ta, (hl)\ninc\thl"},
+    { "ldahlsp", "ldhl\tsp, #%d" },
+    { "ldaspsp", "add sp, #%d" },
+    { "*pair", "(%s)" },
+    { "enter", "" },
+    { "enters", "" },
+    { "enterx", 
+      "add sp, #-%d" },
+    { "pusha", 
+      "push af\n"
+      "push bc\n"
+      "push de\n"
+      "push hl"
+    },
+    { "popa", 
+      "pop hl\n"
+      "pop de\n"
+      "pop bc\n"
+      "pop af"
+    },
+    { "adjustsp", "lda sp, -%d(sp)" },
+    { "fileprelude", "" },
+    { "profileenter",
+                "ld a, #3\n"
+                "rst\t0x08"
+    },
+    { "profileexit",
+                "ld a, #4\n"
+                "rst\t0x08"
+    },
+    { NULL, NULL }
+};
+
 static const ASM_MAPPINGS _isas = {
     NULL,
     _isas_mapping
@@ -472,4 +517,9 @@ const ASM_MAPPINGS _z80asm_z80 = {
 const ASM_MAPPINGS _asxxxx_r2k = {
     &asm_asxxxx_mapping,
     _asxxxx_r2k_mapping
+};
+
+const ASM_MAPPINGS _asxxxx_i80 = {
+    &asm_asxxxx_mapping,
+    _asxxxx_i80_mapping
 };
