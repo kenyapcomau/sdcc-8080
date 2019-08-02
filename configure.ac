@@ -771,6 +771,7 @@ AC_DO_PORT(r3ka,     z80,    R3KA,     [Excludes the Rabbit 3000A port])
 AC_DO_PORT(gbz80,    z80,    GBZ80,    [Excludes the Gameboy gbz80 port])
 AC_DO_PORT(tlcs90,   z80,    TLCS90,   [Excludes the TLCS-90 port])
 AC_DO_PORT(ez80_z80, z80,    EZ80_Z80, [Excludes the EZ80-Z80 port])
+AC_DO_PORT(i80,      z80,    I80,      [Excludes the I80 port])
 AC_DO_PORT(ds390,    ds390,  DS390,    [Excludes the DS390 port])
 AC_DEFINE_UNQUOTED(OPT_DISABLE_TININative, $OPT_DISABLE_DS390, [XXX])
 AC_DO_PORT(ds400,    ds390,  DS400,    [Excludes the DS400 port])
@@ -882,11 +883,12 @@ if test $OPT_DISABLE_Z80 = 0 || test $OPT_DISABLE_Z180 = 0 || test $OPT_DISABLE_
   AC_CONFIG_FILES([src/z80/Makefile])
 fi
 
-if test $OPT_DISABLE_Z80 = 0 || test $OPT_DISABLE_Z180 = 0 || test $OPT_DISABLE_EZ80_Z80 = 0; then
+if test $OPT_DISABLE_Z80 = 0 || test $OPT_DISABLE_Z180 = 0 || test $OPT_DISABLE_EZ80_Z80 = 0 || test OPT_DISABLE_I80 = 0; then
   AC_CONFIG_FILES([sdas/asz80/Makefile])
   test $OPT_DISABLE_DEVICE_LIB = 0 && AC_CONFIG_FILES([device/lib/z80/Makefile
                                                        device/lib/z180/Makefile
-                                                       device/lib/ez80_z80/Makefile])
+                                                       device/lib/ez80_z80/Makefile
+                                                       device/lib/i80/Makefile])
 fi
 
 if test $OPT_DISABLE_R2K = 0 || test $OPT_DISABLE_R3KA = 0; then
@@ -1012,6 +1014,7 @@ sdcc ${VERSION} is now configured for
     gbz80               ${enable_gbz80_port}
     tlcs90              ${enable_tlcs90_port}
     ez80_z80            ${enable_ez80_z80_port}
+    i80                 ${enable_i80_port}
     stm8                ${enable_stm8_port}
     pdk13               ${enable_pdk13_port}
     pdk14               ${enable_pdk14_port}

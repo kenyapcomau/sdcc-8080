@@ -651,6 +651,7 @@ OPT_DISABLE_PIC16
 OPT_DISABLE_PIC14
 OPT_DISABLE_DS400
 OPT_DISABLE_DS390
+OPT_DISABLE_I80
 OPT_DISABLE_EZ80_Z80
 OPT_DISABLE_TLCS90
 OPT_DISABLE_GBZ80
@@ -732,7 +733,6 @@ infodir
 docdir
 oldincludedir
 includedir
-runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -764,6 +764,7 @@ enable_r3ka_port
 enable_gbz80_port
 enable_tlcs90_port
 enable_ez80_z80_port
+enable_i80_port
 enable_ds390_port
 enable_ds400_port
 enable_pic14_port
@@ -853,7 +854,6 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
-runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE}'
@@ -1106,15 +1106,6 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
-  -runstatedir | --runstatedir | --runstatedi | --runstated \
-  | --runstate | --runstat | --runsta | --runst | --runs \
-  | --run | --ru | --r)
-    ac_prev=runstatedir ;;
-  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
-  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
-  | --run=* | --ru=* | --r=*)
-    runstatedir=$ac_optarg ;;
-
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1252,7 +1243,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir runstatedir
+		libdir localedir mandir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1405,7 +1396,6 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
-  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -1450,6 +1440,7 @@ Optional Features:
   --disable-gbz80-port    Excludes the Gameboy gbz80 port
   --disable-tlcs90-port   Excludes the TLCS-90 port
   --disable-ez80_z80-port Excludes the EZ80-Z80 port
+  --disable-i80-port      Excludes the I80 port
   --disable-ds390-port    Excludes the DS390 port
   --disable-ds400-port    Excludes the DS400 port
   --disable-pic14-port    Excludes the PIC14 port
@@ -8005,6 +7996,32 @@ _ACEOF
   fi
 
 
+  # Check whether --enable-i80-port was given.
+if test "${enable_i80_port+set}" = set; then :
+  enableval=$enable_i80_port;
+fi
+
+
+  if test "$enable_i80_port" = "no"; then
+    OPT_DISABLE_I80=1
+  else
+    enable_i80_port="yes"
+    OPT_DISABLE_I80=0
+  fi
+
+
+cat >>confdefs.h <<_ACEOF
+#define OPT_DISABLE_I80 $OPT_DISABLE_I80
+_ACEOF
+
+
+
+  echo z80 >>ports.all
+  if test $OPT_DISABLE_I80 = 0; then
+    echo z80 >>ports.build
+  fi
+
+
   # Check whether --enable-ds390-port was given.
 if test "${enable_ds390_port+set}" = set; then :
   enableval=$enable_ds390_port;
@@ -8876,10 +8893,10 @@ if test $OPT_DISABLE_Z80 = 0 || test $OPT_DISABLE_Z180 = 0 || test $OPT_DISABLE_
 
 fi
 
-if test $OPT_DISABLE_Z80 = 0 || test $OPT_DISABLE_Z180 = 0 || test $OPT_DISABLE_EZ80_Z80 = 0; then
+if test $OPT_DISABLE_Z80 = 0 || test $OPT_DISABLE_Z180 = 0 || test $OPT_DISABLE_EZ80_Z80 = 0 || test OPT_DISABLE_I80 = 0; then
   ac_config_files="$ac_config_files sdas/asz80/Makefile"
 
-  test $OPT_DISABLE_DEVICE_LIB = 0 && ac_config_files="$ac_config_files device/lib/z80/Makefile device/lib/z180/Makefile device/lib/ez80_z80/Makefile"
+  test $OPT_DISABLE_DEVICE_LIB = 0 && ac_config_files="$ac_config_files device/lib/z80/Makefile device/lib/z180/Makefile device/lib/ez80_z80/Makefile device/lib/i80/Makefile"
 
 fi
 
@@ -9671,6 +9688,7 @@ do
     "device/lib/z80/Makefile") CONFIG_FILES="$CONFIG_FILES device/lib/z80/Makefile" ;;
     "device/lib/z180/Makefile") CONFIG_FILES="$CONFIG_FILES device/lib/z180/Makefile" ;;
     "device/lib/ez80_z80/Makefile") CONFIG_FILES="$CONFIG_FILES device/lib/ez80_z80/Makefile" ;;
+    "device/lib/i80/Makefile") CONFIG_FILES="$CONFIG_FILES device/lib/i80/Makefile" ;;
     "sdas/asrab/Makefile") CONFIG_FILES="$CONFIG_FILES sdas/asrab/Makefile" ;;
     "device/lib/r2k/Makefile") CONFIG_FILES="$CONFIG_FILES device/lib/r2k/Makefile" ;;
     "device/lib/r3ka/Makefile") CONFIG_FILES="$CONFIG_FILES device/lib/r3ka/Makefile" ;;
@@ -10687,6 +10705,7 @@ sdcc ${VERSION} is now configured for
     gbz80               ${enable_gbz80_port}
     tlcs90              ${enable_tlcs90_port}
     ez80_z80            ${enable_ez80_z80_port}
+    i80                 ${enable_i80_port}
     stm8                ${enable_stm8_port}
     pdk13               ${enable_pdk13_port}
     pdk14               ${enable_pdk14_port}
@@ -10762,6 +10781,7 @@ sdcc ${VERSION} is now configured for
     gbz80               ${enable_gbz80_port}
     tlcs90              ${enable_tlcs90_port}
     ez80_z80            ${enable_ez80_z80_port}
+    i80                 ${enable_i80_port}
     stm8                ${enable_stm8_port}
     pdk13               ${enable_pdk13_port}
     pdk14               ${enable_pdk14_port}

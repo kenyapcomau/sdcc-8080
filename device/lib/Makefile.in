@@ -74,6 +74,7 @@ OPT_DISABLE_R2K      = @OPT_DISABLE_R2K@
 OPT_DISABLE_R3KA     = @OPT_DISABLE_R3KA@
 OPT_DISABLE_TLCS90   = @OPT_DISABLE_TLCS90@
 OPT_DISABLE_GBZ80    = @OPT_DISABLE_GBZ80@
+OPT_DISABLE_I80      = @OPT_DISABLE_I80@
 OPT_DISABLE_STM8     = @OPT_DISABLE_STM8@
 OPT_DISABLE_PDK13    = @OPT_DISABLE_PDK13@
 OPT_DISABLE_PDK14    = @OPT_DISABLE_PDK14@
@@ -233,6 +234,10 @@ ifeq ($(OPT_DISABLE_GBZ80), 0)
 TARGETS        += model-gbz80
 endif
 
+ifeq ($(OPT_DISABLE_I80), 0)
+TARGETS        += model-i80
+endif
+
 ifeq ($(OPT_DISABLE_STM8), 0)
 TARGETS        += model-stm8
 TARGETS        += model-stm8-large
@@ -370,6 +375,11 @@ model-tlcs90:
 model-gbz80:
 	if grep '^z80$$' $(top_builddir)/ports.build > /dev/null; then \
 	  $(MAKE) MODELFLAGS="-mgbz80" PORT=gbz80 objects-z80 OEXT=.o; \
+	fi
+
+model-i80:
+	if grep '^z80$$' $(top_builddir)/ports.build > /dev/null; then \
+	  $(MAKE) MODELFLAGS="-mi80" PORT=i80 objects-z80 OEXT=.o; \
 	fi
 
 objects-z80:
