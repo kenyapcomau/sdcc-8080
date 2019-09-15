@@ -1640,13 +1640,12 @@ struct mne *mp;
                 break;
 
         case S_DJNZ:
-		if (mchtyp == X_8080)
-			aerr();
-		/* fall through */
         case S_JR:
                 /*
                  * jr  cc,e
                  */
+		if (mchtyp == X_8080)
+			aerr();
                 if (rf == S_JR && (v1 = admode(CND)) != 0) {
                         if ((v1 &= 0xFF) <= 0x03) {
                                 op += (v1+1)<<3;

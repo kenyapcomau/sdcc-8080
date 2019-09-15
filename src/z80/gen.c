@@ -6686,7 +6686,7 @@ genMultOneChar (const iCode * ic)
       emitLabel (tlbl2);
       if (IS_I80) {
         emit2 ("dec a");
-        emit2 ("jr NZ, !tlabel", labelKey2num (tlbl1->key));
+        emit2 ("jp NZ, !tlabel", labelKey2num (tlbl1->key));
       } else
         emit2 ("djnz !tlabel", labelKey2num (tlbl1->key));
       regalloc_dry_run_cost += 12;
@@ -9519,7 +9519,10 @@ genLeftShift (const iCode * ic)
         {
           emit2 ("dec %s", countreg == A_IDX ? "a" : regsZ80[countreg].name);
           if (!regalloc_dry_run)
-            emit2 ("jr NZ,!tlabel", labelKey2num (tlbl->key));
+            if (IS_I80)
+              emit2 ("jp NZ,!tlabel", labelKey2num (tlbl->key));
+            else
+              emit2 ("jr NZ,!tlabel", labelKey2num (tlbl->key));
           regalloc_dry_run_cost += 3;
         }
     }
@@ -9864,8 +9867,12 @@ genRightShift (const iCode * ic)
       else
         {
           emit2 ("dec %s", countreg == A_IDX ? "a" : regsZ80[countreg].name);
-          if (!regalloc_dry_run)
-            emit2 ("jr NZ, !tlabel", labelKey2num (tlbl->key));
+          if (!regalloc_dry_run) {
+            if (IS_I80)
+              emit2 ("jp NZ, !tlabel", labelKey2num (tlbl->key));
+            else
+              emit2 ("jr NZ, !tlabel", labelKey2num (tlbl->key));
+            }
           regalloc_dry_run_cost += 3;
         }
     }
