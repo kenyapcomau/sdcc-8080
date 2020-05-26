@@ -91,6 +91,8 @@
 #define	PE	5
 #define	P	6
 #define	M	7
+#define	NX5	8
+#define	X5	9
 
 /*
  * Symbol types
@@ -163,6 +165,7 @@
 #define	X_ZXN	2
 #define	X_EZ80	3
 #define	X_8080	4
+#define	X_8085	5
 
 /*
  * HD64180 Instructions
@@ -194,6 +197,14 @@
 #define	X_EZ_INH2	111
 #define	X_EZ_LEA	112
 #define	X_EZ_PEA	113
+
+/*
+ * 8085 instructions
+ */
+#define	X_RIM		120
+#define	X_SIM		121
+/* Undocumented */
+#define	X_RSTV		122
 
 /*
  * eZ80 specific addressing extensions (used in mne m_flag)

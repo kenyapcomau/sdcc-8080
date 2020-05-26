@@ -1,5 +1,7 @@
 	.title	Test of Z80 / HD64180 assembler
 
+	.8085
+
 	offset	=	0x55		;arbitrary constants
 	n	=	0x20
 	nn	=	0x0584
@@ -932,82 +934,18 @@ jr5:
 	xor	a,l			;AD
 	xor	a,#n			;EE 20
 
-	.page
-	;***********************************************************
-	; Hitachi HD64180 Codes
-	;***********************************************************
+	.8085
 
-	.hd64
-
-	;***********************************************************
-	; load register with input from port (n)
-	in0	a,(n)			;ED 38 20
-	in0	b,(n)			;ED 00 20
-	in0	c,(n)			;ED 08 20
-	in0	d,(n)			;ED 10 20
-	in0	e,(n)			;ED 18 20
-	in0	h,(n)			;ED 20 20
-	in0	l,(n)			;ED 28 20
-	;***********************************************************
-	; multiplication of each half
-	; of the specified register pair
-	; with the 16-bit result going to
-	; the specified register pair
-	mlt	bc			;ED 4C
-	mlt	de			;ED 5C
-	mlt	hl			;ED 6C
-	mlt	sp			;ED 7C
-	;***********************************************************
-	; load output port (c) with
-	; location (hl),
-	; decrement hl and b
-	; decrement c
-	otdm				;ED 8B
-	;***********************************************************
-	; load output port (c) with
-	; location (hl),
-	; decrement hl and c
-	; decrement b
-	; repeat until b = 0
-	otdmr				;ED 9B
-	;***********************************************************
-	; load output port (c) with
-	; location (hl),
-	; increment hl and b
-	; decrement c
-	otim				;ED 83
-	;***********************************************************
-	; load output port (c) with
-	; location (hl),
-	; increment hl and c
-	; decrement b
-	; repeat until b = 0
-	otimr				;ED 93
-	;***********************************************************
-	; load output port (n) from register
-	out0	(n),a			;ED 39 20
-	out0	(n),b			;ED 01 20
-	out0	(n),c			;ED 09 20
-	out0	(n),d			;ED 11 20
-	out0	(n),e			;ED 19 20
-	out0	(n),h			;ED 21 20
-	out0	(n),l			;ED 29 20
-	;***********************************************************
-	; enter sleep mode
-	slp				;ED 76
-	;***********************************************************
-	; non-destructive'and' with accumulator and specified operand
-	tst	a			;ED 3C
-	tst	b			;ED 04
-	tst	c			;ED 0C
-	tst	d			;ED 14
-	tst	e			;ED 1C
-	tst	h			;ED 24
-	tst	l			;ED 2C
-	tst	#n			;ED 64 20
-	tst	(hl)			;ED 34
-	;***********************************************************
-	; non-destructive 'and' of n and the contents of port (c)
-	tstio	#n			;ED 74 20
-	;***********************************************************
+t85:	rim
+	sim
+	rstv
+	sub	hl,bc
+	sra	hl
+	rlc	de
+	ld	(de),hl
+	ld	hl,(de)
+	ld	de,hl+2
+	ld	de,sp+4
+	jp	nx5,t85
+	jp	x5,t85
 

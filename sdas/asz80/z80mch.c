@@ -706,7 +706,8 @@ struct mne *mp;
                 rf = 0;
 
         switch (mchtyp) {
-	case X_8080:
+        case X_8080:
+        case X_8085:
         case X_Z80:
                 if (rf > S_CPU)
                         rf = 0;
@@ -779,13 +780,13 @@ struct mne *mp;
         switch (rf) {
 
         case S_INH1:
-		if (mchtyp == X_8080 && op == 0xD9)	/* EXX */
+		if ((mchtyp == X_8080 || mchtyp == X_8085) && op == 0xD9)	/* EXX */
 			aerr();
                 outab(op);
                 break;
 
         case S_INH2:
-		if (mchtyp == X_8080)
+		if ((mchtyp == X_8080 || mchtyp == X_8085))
 			aerr();
                 outab(0xED);
                 outab(op);
@@ -821,7 +822,7 @@ struct mne *mp;
                  * push/pop bc/de/hl/ix/iy      (not sp)
                  */
                 if ((v1 = admode(R16)) != 0 && (v1 &= 0xFF) != SP) {
-			if (mchtyp == X_8080 && (v1 == IX || v1 == IY))
+			if ((mchtyp == X_8080 || mchtyp == X_8085) && (v1 == IX || v1 == IY))
 				aerr();
                         if (v1 != gixiy(v1)) {
                                 outab(op+0x20);
@@ -857,7 +858,7 @@ struct mne *mp;
                 break;
 
         case S_IM:
-		if (mchtyp == X_8080)
+		if (mchtyp == X_8080 || mchtyp == X_8085)
 			aerr();
                 expr(&e1, 0);
                 abscheck(&e1);
@@ -911,6 +912,18 @@ struct mne *mp;
                         clrexpr(&e2);
                         t2 = addr(&e2);
                 }
+		/* Undocumented 8085 sra and rlc */
+		/* 0x28 is m_valu in op for sra */
+		/* 0x00 is m_valu in op for rlc */
+		if (mchtyp == X_8085 && t2 == S_R16) {
+ 			if (e2.e_addr == HL && op == 0x28)
+				outab(0x10);
+			else if (e2.e_addr == DE && op == 0x00)
+				outab(0x18);
+			else
+				aerr();
+			break;
+		}
                 if (genop(0xCB, op, &e2, 0) || t1)
                         aerr();
                 break;
@@ -944,6 +957,9 @@ struct mne *mp;
                          */
                         if ((t2 != S_R8) || (e2.e_addr != A))
                                 ++t1;
+			/* Undocumented 8085 sub hl,bc */
+			if (mchtyp == X_8085 && op == S_SUB && t2 == S_R16 && e2.e_addr == BC)
+				++t1;
                         comma(1);
                         clrexpr(&e2);
                         t2 = addr(&e2);
@@ -955,6 +971,11 @@ struct mne *mp;
                         outab( op + e2.e_addr );
                         break;
                 }
+		/* Undocumented 8085 sub hl,bc */
+		if (t1 && mchtyp == X_8085 && t2 == S_R16 && e2.e_addr == BC) {
+			outab(0x08);
+			break;
+		}
 
                 /*
                  * op  (hl)
@@ -1024,7 +1045,7 @@ struct mne *mp;
                          */
                         if ((v1 == HL) && (v2 <= SP)) {
                                 if (rf != S_ADD) {
-					if (mchtyp == X_8080)
+					if (mchtyp == X_8080 || mchtyp == X_8085)
 						aerr();
                                         outab(0xED);
 				}
@@ -1292,7 +1313,7 @@ struct mne *mp;
                         if (gixiy(v1) == HL) {
                                 outab(0x2A);
                         } else {
-				if (mchtyp == X_8080)
+				if (mchtyp == X_8080 || mchtyp == X_8085)
 					aerr();
                                 outab(0xED);
                                 outab(0x4B | (v1<<4));
@@ -1312,7 +1333,7 @@ struct mne *mp;
                         if (gixiy(v2) == HL) {
                                 outab(0x22);
                         } else {
-				if (mchtyp == X_8080)
+				if (mchtyp == X_8080 || mchtyp == X_8085)
 					aerr();
                                 outab(0xED);
                                 outab(0x43 | (v2<<4));
@@ -1364,7 +1385,7 @@ struct mne *mp;
                  * ld  I,a
                  */
                 if ((t1 == S_R8X) && (t2 == S_R8) && (v2 == A)) {
-			if (mchtyp == X_8080)
+			if (mchtyp == X_8080 || mchtyp == X_8085)
 				aerr();
                         outab(0xED);
                         outab(v1);
@@ -1383,7 +1404,7 @@ struct mne *mp;
                  * ld  a,I
                  */
                 if ((t1 == S_R8) && (v1 == A) && (t2 == S_R8X)) {
-			if (mchtyp == X_8080)
+			if (mchtyp == X_8080 || mchtyp == X_8085)
 				aerr();
                         outab(0xED);
                         outab(v2|0x10);
@@ -1409,6 +1430,7 @@ struct mne *mp;
                                 break;
                         }
                 }
+
                 /*
                  * ld  a,(bc)
                  * ld  a,(de)
@@ -1429,6 +1451,33 @@ struct mne *mp;
                                 break;
                         }
                 }
+
+		/* Undocumented 8085 ld (de),hl */
+		if (mchtyp == X_8085 && t1 == S_IDDE && v2 == HL) {
+			outab(0xD9);
+			break;
+		}
+
+		/* Undocumented 8085 ld hl,(de) */
+		if (mchtyp == X_8085 && v1 == HL && t2 == S_IDDE) {
+			outab(0xED);
+			break;
+		}
+
+		/* Undocumented 8085 ld de,{hl,sp}+n */
+		if (mchtyp == X_8085 && t1 == S_R16 && v1 == DE && (v2 == HL || v2 == SP) && more()) {
+			if ((t3 = getnb()) != '+') {
+				unget(t3);
+				break;
+			}
+			if (v2 == HL)
+				outab(0x28);
+			else if (v2 == SP)
+				outab(0x38);
+			expr(&e1, 0);
+			outrb(&e1, 0);
+			break;
+		}
 
                 /*
                  * ld  hl,i
@@ -1569,7 +1618,7 @@ struct mne *mp;
                          * out  (c),r   [out  (bc),r]
                          */
                         if (t2 == S_IDC) {
-				if (mchtyp == X_8080)
+				if (mchtyp == X_8080 || mchtyp == X_8085)
 					aerr();
                                 outab(0xED);
                                 outab(((rf == S_IN) ? 0x40 : 0x41) + (v1<<3));
@@ -1644,7 +1693,7 @@ struct mne *mp;
                 /*
                  * jr  cc,e
                  */
-		if (mchtyp == X_8080)
+		if (mchtyp == X_8080 || mchtyp == X_8085)
 			aerr();
                 if (rf == S_JR && (v1 = admode(CND)) != 0) {
                         if ((v1 &= 0xFF) <= 0x03) {
@@ -1692,9 +1741,17 @@ struct mne *mp;
         case S_JP:
                 /*
                  * jp  cc,mn
+		 * Also handle Undocumented 8085 jp (n)x5,mn
                  */
                 if ((v1 = admode(CND)) != 0) {
-                        op |= (v1&0xFF)<<3;
+			v1 &= 0xFF;
+			/* Treat jp (n)x5,mn on non-8085 as jp mn */
+			if (v1 == NX5)
+				op = (mchtyp == X_8085) ? 0xDD : 0xC2;
+			else if (v1 == X5)
+				op = (mchtyp == X_8085) ? 0xFD : 0xC2;
+			else
+				op |= v1<<3;
                         comma(1);
                         expr(&e1, 0);
                         outab(op);
@@ -2053,7 +2110,6 @@ struct mne *mp;
                 aerr();
                 break;
 
-
         default:
                 opcycles = OPCY_ERR;
                 err('o');
@@ -2083,7 +2139,8 @@ struct mne *mp;
                         }
                         break;
                 case X_Z80:
-		case X_8080:
+                case X_8080:
+                case X_8085:
                         opcycles = z80pg1[cb[0] & 0xFF];
                         while ((opcycles & OPCY_NONE) && (opcycles & OPCY_MASK)) {
                                 switch (opcycles) {
@@ -2170,7 +2227,7 @@ int f;
 {
         int t1;
 
-	if (pop && mchtyp == X_8080)
+	if (pop && (mchtyp == X_8080 || mchtyp == X_8085))
 		aerr();
         if ((t1 = esp->e_mode) == S_R8) {
                 if (pop)

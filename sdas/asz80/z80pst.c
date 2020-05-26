@@ -142,6 +142,7 @@ struct  mne     mne[] = {
     {   NULL,   ".zxn",         S_CPU,          0,      X_ZXN   },
     {   NULL,   ".ez80",        S_CPU,          0,      X_EZ80  },
     {   NULL,   ".8080",        S_CPU,          0,      X_8080  },
+    {   NULL,   ".8085",        S_CPU,          0,      X_8085  },
 
 	/* z80 / hd64180 */
 
@@ -465,6 +466,12 @@ struct  mne     mne[] = {
     {	NULL,	"pea.s",	X_EZ_PEA,	M_S,	0x65	},
 
     {	NULL,	"rsmix",	X_EZ_INH2,	0,	0x7E	},
-    {	NULL,	"stmix",	X_EZ_INH2,	S_EOL,	0x7D	}
+    {	NULL,	"stmix",	X_EZ_INH2,	0,	0x7D	},
+
+	/* 8085 */
+    {	NULL,	"rim",		S_INH1,		0,	0x20	},
+    {	NULL,	"sim",		S_INH1,		0,	0x30	},
+	/* Undocumented */
+    {	NULL,	"rstv",		S_INH1,		S_EOL,	0xCB	},
 
 };

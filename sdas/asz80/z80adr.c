@@ -61,7 +61,7 @@ struct expr *esp;
                         mode = S_INDB;
                 } else
                 if ((indx = admode(R16)) != 0) {
-			if (mchtyp == X_8080 && ((indx&0xFF)==IX || (indx&0xFF)==IY))
+			if ((mchtyp == X_8080 || mchtyp == X_8085) && ((indx&0xFF)==IX || (indx&0xFF)==IY))
 				aerr();
                         mode = S_INDR;
                 } else
@@ -90,12 +90,12 @@ struct expr *esp;
                         mode = S_R8;
                 } else
                 if ((indx = admode(R16)) != 0) {
-			if (mchtyp == X_8080 && ((indx&0xFF)==IX || (indx&0xFF)==IY))
+			if ((mchtyp == X_8080 || mchtyp == X_8085) && ((indx&0xFF)==IX || (indx&0xFF)==IY))
 				aerr();
                         mode = S_R16;
                 } else
                 if ((indx = admode(R8X)) != 0) {
-			if (mchtyp == X_8080)
+			if (mchtyp == X_8080 || mchtyp == X_8085)
 				aerr();
                         mode = S_R8X;
                 } else
@@ -106,7 +106,7 @@ struct expr *esp;
                         mode = S_R8U2;
                 } else
                 if ((indx = admode(R16X)) != 0) {
-			if (mchtyp == X_8080 && ((indx&0xFF)==IX || (indx&0xFF)==IY))
+			if ((mchtyp == X_8080 || mchtyp == X_8085) && ((indx&0xFF)==IX || (indx&0xFF)==IY))
 				aerr();
                         mode = S_R16X;
                 } else
@@ -124,7 +124,7 @@ struct expr *esp;
                 }
                 if ((c = getnb()) == LFIND) {
                         if ((indx=admode(R16))!=0
-                                && mchtyp != X_8080 && ((indx&0xFF)==IX || (indx&0xFF)==IY)) {
+                                && mchtyp != X_8080 && mchtyp != X_8085 && ((indx&0xFF)==IX || (indx&0xFF)==IY)) {
                                 esp->e_mode = S_INDR + (indx&0xFF);
                         } else {
                                 aerr();
@@ -268,5 +268,7 @@ struct  adsym   CND[] = {
     {   "PE",   PE|0400 },
     {   "P",    P |0400 },
     {   "M",    M |0400 },
+    {   "NX5",  NX5 |0400 },
+    {   "X5",   X5 |0400 },
     {   "",     0000    }
 };
