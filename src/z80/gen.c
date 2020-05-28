@@ -10963,7 +10963,7 @@ genPointerSet (iCode * ic)
 
               continue;
             }
-          else if (isRegOrLit (AOP (right)) && !IS_GB)
+          else if (isRegOrLit (AOP (right)) && !IS_GB_I80)
             {
               if (!regalloc_dry_run)
                 emit2 ("ld !*pair, %s", _pairs[PAIR_HL].name, aopGet (right->aop, offset, FALSE));
@@ -10997,7 +10997,7 @@ genPointerSet (iCode * ic)
       goto release;
     }
 
-  if (!IS_GB && !isBitvar && isLitWord (AOP (result)) && size == 2 && offset == 0 &&
+  if (!IS_GB_I80 && !isBitvar && isLitWord (AOP (result)) && size == 2 && offset == 0 &&
       (AOP_TYPE (right) == AOP_REG && getPairId (AOP (right)) != PAIR_INVALID || isLitWord (AOP (right))))
     {
       if (isLitWord (AOP (right)))
@@ -11011,7 +11011,7 @@ genPointerSet (iCode * ic)
       regalloc_dry_run_cost += (pairId == PAIR_HL) ? 3 : 4;
       goto release;
     }
-  if (!IS_GB && !isBitvar && isLitWord (AOP (result)) && size == 4 && offset == 0 &&
+  if (!IS_GB_I80 && !isBitvar && isLitWord (AOP (result)) && size == 4 && offset == 0 &&
     (getPartPairId (AOP (right), 0) != PAIR_INVALID && getPartPairId (AOP (right), 2) != PAIR_INVALID || isLitWord (AOP (right))))
     {
       if (isLitWord (AOP (right)))

@@ -33,14 +33,12 @@ Z80_SDCC = $(COMMON_SDCC) \
   _itoa.c \
   _ltoa.c \
   _startup.c \
-  sprintf.c \
-  vprintf.c \
   _strcmp.c \
   __memcpy.c \
   memcpy.c
 
 Z80SOURCES = $(addprefix ../,$(Z80_FLOAT) $(Z80_INT) $(Z80_LONG) $(Z80_LONGLONG) $(Z80_SDCC))
-Z8OBJECTS = $(patsubst %.c,%.rel,$(Z80_FLOAT) $(Z80_INT) $(Z80_LONG) $(Z80_LONGLONG) $(Z80_SDCC))
+Z8OBJECTS = $(patsubst %.c,%.rel, $(Z80_INT) $(Z80_SDCC))
 
 #OBJ = divunsigned.rel divsigned.rel divmixed.rel modunsigned.rel modsigned.rel modmixed.rel mul.rel mulchar.rel \
 #      heap.rel memmove.rel strcpy.rel strlen.rel abs.rel __sdcc_call_hl.rel __sdcc_call_iy.rel crtenter.rel \
