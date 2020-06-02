@@ -9697,6 +9697,44 @@ genRightShiftLiteral (operand * left, operand * right, operand * result, const i
 }
 
 /*-----------------------------------------------------------------*/
+/* genI80RightShiftLiteral - right shifting by known count on I80  */
+/*-----------------------------------------------------------------*/
+static void
+genI80RightShiftLiteral (operand * left, operand * right, operand * result, const iCode * ic, int sign)
+{
+  unsigned int size;
+
+  aopOp (left, ic, FALSE, FALSE);
+  aopOp (result, ic, FALSE, FALSE);
+
+  aopDump("Right", AOP (right));
+  aopOp (left, ic, FALSE, FALSE);
+  aopDump("Left", AOP (left));
+  aopOp (result, ic, FALSE, FALSE);
+  aopDump("Result", AOP (result));
+
+  freeAsmop (right, NULL);
+
+  size = getSize (operandType (result));
+
+  /* I suppose that the left size >= result size */
+  wassert (getSize (operandType (left)) >= size);
+
+  if (!SPEC_USIGN (getSpec (operandType (left))))
+    {
+      cheapMove (ASMOP_A, 0, left->aop, 0, true);
+      emit3 (A_RLC, ASMOP_A, 0);
+      emit3 (A_SBC, ASMOP_A, ASMOP_A);
+      while (size--)
+        cheapMove (result->aop, size, ASMOP_A, 0, true);
+    }
+  else
+    genMove (result->aop, ASMOP_ZERO, true, isPairDead (PAIR_HL, ic));
+  freeAsmop (left, NULL);
+  freeAsmop (result, NULL);
+}
+
+/*-----------------------------------------------------------------*/
 /* genRightShift - generate code for right shifting                */
 /*-----------------------------------------------------------------*/
 static void
@@ -9892,11 +9930,12 @@ end:
 static void
 genI80RightShift (const iCode * ic)
 {
+  unsigned int shCount;
   operand *right, *left, *result;
   sym_link *retype;
   bool is_signed;
   int size;
-  char shiftfun[] = { "_sriNNNNNN" };
+  char shiftfun[] = "_sriNNNNNN";
 
   right = IC_RIGHT (ic);
   left = IC_LEFT (ic);
@@ -9908,15 +9947,29 @@ genI80RightShift (const iCode * ic)
   is_signed = !SPEC_USIGN (retype);
 
   aopOp (right, ic, FALSE, FALSE);
-  aopDump("Right", AOP (right));
+  shCount = (unsigned int) ulFromVal (AOP (right)->aopu.aop_lit);
+  size = getSize (operandType (result));
+
+  /* if the shift count is known then do it
+     as efficiently as possible */
+  if (shCount >= size * 8 && AOP_TYPE (right) == AOP_LIT && getSize (operandType (result)) <= 2)
+    {
+      emitDebug ("; genI80RightShiftLiteral");
+      genI80RightShiftLiteral (left, right, result, ic, is_signed);
+      freeAsmop (right, NULL);
+      return;
+    }
+
+  aopOp (result, ic, FALSE, FALSE);
   aopOp (left, ic, FALSE, FALSE);
-  aopDump("Left", AOP (left));
+
+  aopDump("Right", AOP (right));
   aopOp (result, ic, FALSE, FALSE);
   aopDump("Result", AOP (result));
+  aopOp (left, ic, FALSE, FALSE);
+  aopDump("Left", AOP (left));
 
-  if (requiresHL (AOP (result)))
-    spillPair (PAIR_HL);
-
+  spillPair (PAIR_HL);
   size = AOP_SIZE (result);
   wassert(size == 1 || size == 2 || size == 4);
   fetchPair (PAIR_HL, AOP (left));
@@ -9925,13 +9978,24 @@ genI80RightShift (const iCode * ic)
       spillPair (PAIR_DE);
       fetchPair (PAIR_DE, AOP (left));
     }
+  /* builtin shift functions destroy a and bc, and return in hl */
   spillPair (PAIR_BC);
   fetchPair (PAIR_BC, AOP (right));
-  /* builtin shift functions destroy bc */
-  emit2 ("push bc");
+  emit2 ("push af");
   sprintf(shiftfun, "_sr%c%d", (is_signed ? 'i' : 'u'), size);
   emit2 ("call %s", shiftfun);
-  emit2 ("pop bc");
+  emit2 ("pop af");
+  /* How to indicate result is now in HL? Like this? */
+/*
+  AOP_TYPE(result) = AOP_REG;
+  AOP(result)->aopu.aop_pairId = PAIR_HL;
+
+  aopDump("Right", AOP (right));
+  aopOp (result, ic, FALSE, FALSE);
+  aopDump("Result", AOP (result));
+  aopOp (left, ic, FALSE, FALSE);
+  aopDump("Left", AOP (left));
+*/
 
   /* now move the left to the result if they are not the
      same */
