@@ -717,7 +717,7 @@ struct mne *mp;
                         rf = 0;
                 break;
         case X_ZXN:
-                if (rf > S_CPU && rf < X_ZXN_INH2 && rf != X_TST)
+                if (rf > S_CPU && rf < X_ZXN_INH2 && rf != X_TST && rf != X_MLT)
                         rf = 0;
                 break;
         case X_EZ80:
@@ -1822,7 +1822,12 @@ struct mne *mp;
                  * mlt  bc/de/hl/sp
                  */
                 t1 = addr(&e1);
-                if ((t1 == S_R16) && ((v1 = (int) e1.e_addr) <= SP)) {
+                if (mchtyp == X_ZXN && (t1 == S_R16) && (int) e1.e_addr == DE) {
+                        outab(0xED);
+                        outab(0x30);
+                        break;
+                }
+                else if ((t1 == S_R16) && ((v1 = (int) e1.e_addr) <= SP)) {
                         outab(0xED);
                         outab(op | (v1<<4));
                         break;
@@ -1897,6 +1902,11 @@ struct mne *mp;
                 break;
 
         case X_ZXN_INH2:
+                if (op == 0x23 && more()) { // Optional argument a on swap
+                        t1 = addr(&e1);
+                        if (t1 != S_R8 || e1.e_addr != A)
+                          aerr();
+                  }
                 outab(0xED);
                 outab(op);
                 break;
@@ -1946,24 +1956,6 @@ struct mne *mp;
                         outab(0xED);
                         outab(0x92);
                         outrb(&e1, 0);
-                        break;
-                }
-                aerr();
-                break;
-
-        case X_ZXN_MMU:
-                t1 = addr(&e1);
-                if (t1 == S_IMMED) {
-                        outab(0xED);
-                        outab(0x91);
-                        outab(op);
-                        outrb(&e1, 0);
-                        break;
-                }
-                if (t1 == S_R8 && e1.e_addr == A) {
-                        outab(0xED);
-                        outab(0x92);
-                        outab(op);
                         break;
                 }
                 aerr();

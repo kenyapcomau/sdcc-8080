@@ -250,6 +250,7 @@ struct  mne     mne[] = {
 	/* z80-zxn */
 
     {   NULL,   "swapnib",      X_ZXN_INH2,     0,      0x23    },
+    {   NULL,   "swap",         X_ZXN_INH2,     0,      0x23    },
     {   NULL,   "mul",          X_ZXN_MUL,      0,      0x30    },
     {   NULL,   "outinb",       X_ZXN_INH2,     0,      0x90    },
     {   NULL,   "ldix",         X_ZXN_INH2,     0,      0xA4    },
@@ -263,14 +264,6 @@ struct  mne     mne[] = {
     {   NULL,   "pixeldn",      X_ZXN_INH2,     0,      0x93    },
     {   NULL,   "pixelad",      X_ZXN_INH2,     0,      0x94    },
     {   NULL,   "setae",        X_ZXN_INH2,     0,      0x95    },
-    {   NULL,   "mmu0",         X_ZXN_MMU,      0,      0x50    },
-    {   NULL,   "mmu1",         X_ZXN_MMU,      0,      0x51    },
-    {   NULL,   "mmu2",         X_ZXN_MMU,      0,      0x52    },
-    {   NULL,   "mmu3",         X_ZXN_MMU,      0,      0x53    },
-    {   NULL,   "mmu4",         X_ZXN_MMU,      0,      0x54    },
-    {   NULL,   "mmu5",         X_ZXN_MMU,      0,      0x55    },
-    {   NULL,   "mmu6",         X_ZXN_MMU,      0,      0x56    },
-    {   NULL,   "mmu7",         X_ZXN_MMU,      0,      0x57    },
     {   NULL,   "cu.wait",      X_ZXN_CU_WAIT,  0,      0       },
     {   NULL,   "cu.move",      X_ZXN_CU_MOVE,  0,      0       },
     {   NULL,   "cu.stop",      X_ZXN_CU_STOP,  0,      0       },
