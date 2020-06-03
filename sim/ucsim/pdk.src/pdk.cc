@@ -25,27 +25,28 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 02111-1307, USA. */
 /*@1@*/
 
-#include "ddconfig.h"
+//#include "ddconfig.h"
 
-#include <ctype.h>
-#include <stdarg.h> /* for va_list */
-#include <cassert>
+//#include <ctype.h>
+//#include <stdarg.h> /* for va_list */
+//#include <cassert>
 #include <stdio.h>
 #include <stdlib.h>
-#include "i_string.h"
+#include <string.h>
+//#include "i_string.h"
 
 // prj
 #include "globals.h"
-#include "pobjcl.h"
+//#include "pobjcl.h"
 
 // sim
-#include "simcl.h"
+//#include "simcl.h"
 
 // local
 #include "glob.h"
 #include "pdkcl.h"
-#include "portcl.h"
-#include "regspdk.h"
+//#include "portcl.h"
+//#include "regspdk.h"
 
 /*******************************************************************/
 
@@ -81,7 +82,7 @@ void cl_pdk::reset(void) {
   PC = 0x0000;
   regs.a = 0;
   for (size_t i = 0; i < io_size; ++i) {
-    regs.regs[i] = 0;
+    store_io(i, 0);
   }
 }
 
@@ -140,7 +141,7 @@ void cl_pdk::make_memories(void) {
     ram_storage = 0x100;
     break;
   default:
-    __builtin_unreachable();
+    return;//__builtin_unreachable();
   }
   rom = as = new cl_address_space("rom", 0, rom_storage, 16);
   as->init();
@@ -148,25 +149,27 @@ void cl_pdk::make_memories(void) {
   ram = as = new cl_address_space("ram", 0, ram_storage, 8);
   as->init();
   address_spaces->add(as);
+  regs8 = as = new cl_address_space("regs8", 0, io_size + 1, 8);
+  as->init();
+  address_spaces->add(as);
 
-  class cl_address_decoder *ad;
-  class cl_memory_chip *chip;
+  {
+    class cl_address_decoder *ad;
+    class cl_memory_chip *chip;
 
-  chip = new cl_memory_chip("rom_chip", rom_storage, 16);
-  chip->init();
-  memchips->add(chip);
+    chip = new cl_memory_chip("rom_chip", rom_storage, 16);
+    chip->init();
+    memchips->add(chip);
 
-  ad = new cl_address_decoder(as = address_space("rom"), chip, 0, rom_storage, 0);
-  ad->init();
-  as->decoders->add(ad);
-  ad->activate(0);
-
-  regs8 = new cl_address_space("regs8", 0, io_size + 1, 8);
-  regs8->init();
-  for (size_t i = 0; i < io_size; ++i) {
-    regs8->get_cell(i)->decode((t_mem *)(regs.regs + i));
+    ad = new cl_address_decoder(as = address_space("rom"), chip, 0, rom_storage, 0);
+    ad->init();
+    as->decoders->add(ad);
+    ad->activate(0);
   }
-  address_spaces->add(regs8);
+  {
+    // extra byte of the IO memory will point to the A register just for the debugger
+    regs8->get_cell(io_size)->decode(&(regs._a));
+  }
 
   class cl_var *v;
   vars->add(v = new cl_var(cchars("flag"), regs8, 0, ""));
@@ -188,7 +191,7 @@ struct dis_entry *cl_pdk::dis_tbl(void) {
   case CPU_PDK15:
     return (disass_pdk_15);
   default:
-    __builtin_unreachable();
+    return NULL;//__builtin_unreachable();
   }
 }
 
@@ -249,7 +252,7 @@ const char *cl_pdk::get_disasm_info(t_addr addr, int *ret_len, int *ret_branch,
         break;
 
       default:
-        __builtin_unreachable();
+        return (char*)"";//__builtin_unreachable();
   }
 
   uint code = rom->get(addr++);
@@ -325,7 +328,7 @@ char *cl_pdk::disass(t_addr addr, const char *sep) {
               code &= 0x7F;
               break;
             default:
-              __builtin_unreachable();
+              ;//__builtin_unreachable();
            }
 
             ++b;
@@ -345,7 +348,7 @@ char *cl_pdk::disass(t_addr addr, const char *sep) {
             n = (code & 0x380) >> 7;
             break;
           default:
-            __builtin_unreachable();
+            n= 0;//__builtin_unreachable();
           }
           sprintf(temp, "#%u", n);
           break;
@@ -382,8 +385,8 @@ char *cl_pdk::disass(t_addr addr, const char *sep) {
 
 void cl_pdk::print_regs(class cl_console_base *con) {
   con->dd_printf("A= 0x%02x(%3d)\n", regs.a, regs.a);
-  con->dd_printf("Flag= 0x%02x(%3d)  \n", regs.regs[0x00], regs.regs[0x00]);
-  con->dd_printf("SP= 0x%02x(%3d)\n", regs.regs[0x02], regs.regs[0x02]);
+  con->dd_printf("Flag= 0x%02x(%3d)  \n", get_flags(), get_flags());
+  con->dd_printf("SP= 0x%02x(%3d)\n", get_SP(), get_SP());
 
   print_disass(PC, con);
 }

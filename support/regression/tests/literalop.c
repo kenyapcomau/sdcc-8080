@@ -3,9 +3,9 @@
     type: char, short, LONG
  */
 #include <testfwk.h>
+#include <limits.h>
 
-/* 64 bit hosts */
-#if defined(__alpha__) || defined(__x86_64__) || defined(__sparc64__) || defined(__PPC64__) || defined(__aarch64__)
+#if INT_MAX >= 2147483647
 #  define LONG int
 #else
 #  define LONG long
@@ -123,14 +123,8 @@ testOpOp (void)
   uc = (unsigned char ) 0xfffffff8;
   ASSERT (uc * (unsigned char ) 0xfffffff7 == 0xef48);
   us = (unsigned short) 0xfffffff8;
-#if !(defined(PORT_HOST) && defined(__NetBSD__) && defined(__GNUC__) && (__GNUC__ == 4 && __GNUC_MINOR__ == 1))
-  /* this test fails on i386 and sparc64 NetBSD gcc 4.1 when compiled with -O2:
-   * the result of us * (unsigned short) 0xfffffff7 is 0x7fffffff */
-#if !(defined(PORT_HOST) && defined(__APPLE__))
-  /* this test also fails on MacOS x86-64 with -O2 flag, but succeeds when switches to -O0 */
-  ASSERT (us * (unsigned short) 0xfffffff7 == (sizeof(int) == 2 ? 0x0048 : 0xffef0048));
-#endif
-#endif
+  if (sizeof (int) == 2 && CHAR_BIT == 8)
+    ASSERT (us * (unsigned short) 0xfffffff7 == 0x0048);
   ul = (unsigned LONG ) 0xfffffff8;
   ASSERT (ul * (unsigned LONG ) 0xfffffff7 == 0x0048);
   ul = (unsigned LONG ) 0xfffffff8;

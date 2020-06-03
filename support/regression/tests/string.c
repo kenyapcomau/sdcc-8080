@@ -16,6 +16,7 @@ static void
 do_teststrcmp (void)
 {
 #ifndef __SDCC_pdk14 // Lack of memory
+#if !(defined (__SDCC_pdk15) && defined(__SDCC_STACK_AUTO)) // Lack of code memory
   int result = strcmp ("", "");
   ASSERT (result == 0);
   
@@ -31,6 +32,7 @@ do_teststrcmp (void)
   result = strcmp ("aa", "ab");
   ASSERT (result < 0);
 #endif
+#endif
 }
 
 /** tests for strcpy
@@ -39,6 +41,7 @@ static void
 do_teststrcpy (void)
 {
 #ifndef __SDCC_pdk14 // Lack of memory
+#if !(defined (__SDCC_pdk15) && defined(__SDCC_STACK_AUTO)) // Lack of code memory
   static char empty[] = "";
   static char string[] = "\1\2\0\3";
   char buf[40] = "abcdefghijklmnopqrstuvwxyz";
@@ -54,6 +57,7 @@ do_teststrcpy (void)
   ASSERT (buf[1] == '\2');
   ASSERT (buf[3] == 'd');
 #endif
+#endif
 }
 
 /** tests for strncmp
@@ -62,6 +66,7 @@ static void
 do_teststrncmp (void)
 {
 #ifndef __SDCC_pdk14 // Lack of memory
+#if !(defined (__SDCC_pdk15) && defined(__SDCC_STACK_AUTO)) // Lack of code memory
   ASSERT (strncmp ("", "", 0) == 0);
   ASSERT (strncmp ("ab", "ab", 0) == 0);
   ASSERT (strncmp ("a", "a", 2) == 0);
@@ -69,6 +74,7 @@ do_teststrncmp (void)
   ASSERT (strncmp ("aa", "ab", 2) < 0);
   ASSERT (strncmp ("abc", "abd", 2) == 0);
   ASSERT (strncmp ("abc", "abc", 3) == 0);
+#endif
 #endif
 }
 
@@ -198,6 +204,7 @@ static void
 do_utf_8_sdcc (void)
 {
 #ifndef __SDCC_pdk14 // Lack of memory
+#if !(defined (__SDCC_pdk15) && defined(__SDCC_STACK_AUTO)) // Lack of code memory
 #ifdef __SDCC
   const char *str1 = "Ä ä";
   const char *str2 = "\u00c4 ä";
@@ -218,13 +225,14 @@ do_utf_8_sdcc (void)
   ASSERT (mblen("", 3) == 0);
 #endif
 #endif
+#endif
 }
 
 // Test C11 UTF-16 behaviour
 static void
 do_utf_16 (void)
 {
-#ifdef __STDC_UTF_16__
+#if defined(__STDC_UTF_16__) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
   const char16_t *str1 = u"Ä ä";
   const char16_t *str2 = u"\u00c4 ä";
   const char16_t *str3 = u"Ä " "ä";
@@ -245,6 +253,7 @@ static void
 do_utf_32_c95 (void)
 {
 #ifndef __SDCC_pdk14 // Lack of memory
+#if !(defined (__SDCC_pdk15) && defined(__SDCC_STACK_AUTO)) // Lack of code memory
 #ifdef __STDC_ISO_10646__
   const wchar_t *str1 = L"Ä ä";
   const wchar_t *str2 = L"\u00c4 ä";
@@ -261,13 +270,14 @@ do_utf_32_c95 (void)
   ASSERT (!memcmp (str1, str5, 4 * sizeof(wchar_t)));
 #endif
 #endif
+#endif
 }
 
 // Test C11 UTF-32 behaviour
 static void
 do_utf_32_c11 (void)
 {
-#ifdef __STDC_UTF_32__
+#if defined(__STDC_UTF_32__) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
   const char32_t *str1 = U"Ä ä";
   const char32_t *str2 = U"\u00c4 ä";
   const char32_t *str3 = U"Ä " "ä";
@@ -286,22 +296,22 @@ do_utf_32_c11 (void)
 static void
 do_chinese (void)
 {
-#ifdef __STDC_UTF_32__
+#if defined(__STDC_UTF_32__) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
   const char32_t *p0 = U"史斌";
 #endif
 #ifdef __STDC_ISO_10646__
   const wchar_t *p1 = L"史庭芳";
 #endif
-#ifdef __STDC_UTF_16__
+#if defined(__STDC_UTF_16__) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
   const char16_t *p2 = u"天津";
 #endif
-#ifdef __STDC_UTF_32__
+#if defined(__STDC_UTF_32__) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
   ASSERT (p0[0] == 0x53f2);
 #endif
 #ifdef __STDC_ISO_10646__
   ASSERT (p1[2] == 0x82b3);
 #endif
-#ifdef __STDC_UTF_16__
+#if defined(__STDC_UTF_16__) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
   ASSERT (p2[1] == 0x6d25);
 #endif
 }
