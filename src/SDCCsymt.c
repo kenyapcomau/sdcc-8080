@@ -334,6 +334,8 @@ newSymbol (const char *name, long scope)
   sym->for_newralloc = 0;
   sym->isinscope = 1;
   sym->usl.spillLoc = 0;
+
+  // Err on the safe side, when in doubt disabling optimizations.
   sym->funcDivFlagSafe = 0;
   sym->funcUsesVolatile = 1;
 
@@ -489,16 +491,12 @@ pointerTypes (sym_link * ptr, sym_link * type)
 void
 addDecl (symbol * sym, int type, sym_link * p)
 {
-  static sym_link *empty = NULL;
   sym_link *head;
   sym_link *tail;
   sym_link *t;
 
   if (getenv ("SDCC_DEBUG_FUNCTION_POINTERS"))
     fprintf (stderr, "SDCCsymt.c:addDecl(%s,%d,%p)\n", sym->name, type, (void *)p);
-
-  if (empty == NULL)
-    empty = newLink (SPECIFIER);
 
   /* if we are passed a link then set head & tail */
   if (p)
@@ -513,16 +511,18 @@ addDecl (symbol * sym, int type, sym_link * p)
       DCL_TYPE (head) = type;
     }
 
-  /* if this is the first entry   */
+  // no type yet: make p the type
   if (!sym->type)
     {
       sym->type = head;
       sym->etype = tail;
     }
+  // type ends in spec, p is single spec element: merge specs
   else if (IS_SPEC (sym->etype) && IS_SPEC (head) && head == tail)
     {
       sym->etype = mergeSpec (sym->etype, head, sym->name);
     }
+  // type ends in spec, p is single decl element: p goes before spec
   else if (IS_SPEC (sym->etype) && !IS_SPEC (head) && head == tail)
     {
       t = sym->type;
@@ -531,11 +531,25 @@ addDecl (symbol * sym, int type, sym_link * p)
       t->next = head;
       tail->next = sym->etype;
     }
-  else if (IS_FUNC (sym->type) && IS_SPEC (sym->type->next) && !memcmp (sym->type->next, empty, sizeof (sym_link)))
+  // type ends in spec, p ends in spec: merge specs, p's decls go before spec
+  else if (IS_SPEC (sym->etype) && IS_SPEC (tail))
     {
-      sym->type->next = head;
-      sym->etype = tail;
+      sym->etype = mergeSpec (sym->etype, tail, sym->name);
+
+      // cut off p's spec
+      t = head;
+      while (t->next != tail)
+          t = t->next;
+      tail = t;
+
+      // splice p's decls
+      t = sym->type;
+      while (t->next != sym->etype)
+          t = t->next;
+      t->next = head;
+      tail->next = sym->etype;
     }
+  // append p to the type
   else
     {
       sym->etype->next = head;
@@ -543,7 +557,7 @@ addDecl (symbol * sym, int type, sym_link * p)
     }
 
   /* if the type is an unknown pointer and has
-     a tspec then take the storage class const & volatile
+     a tspec then take the storage class and address
      attribute from the tspec & make it those of this
      symbol */
   if (p && !IS_SPEC (p) &&
@@ -617,13 +631,6 @@ checkTypeSanity (sym_link *etype, const char *name)
        SPEC_NOUN (etype) == V_DOUBLE || SPEC_NOUN (etype) == V_VOID) && (etype->select.s.b_signed || SPEC_USIGN (etype)))
     {                           // signed or unsigned for float double or void
       werror (E_SIGNED_OR_UNSIGNED_INVALID, noun, name);
-    }
-
-  // special case for "short"
-  if (SPEC_SHORT (etype))
-    {
-      SPEC_NOUN (etype) = V_INT;
-      SPEC_SHORT (etype) = 0;
     }
 
   /* if no noun e.g.
@@ -882,14 +889,23 @@ mergeDeclSpec (sym_link * dest, sym_link * src, const char *name)
         }
     }
 
-  DCL_PTR_CONST (decl) |= SPEC_CONST (spec);
-  DCL_PTR_VOLATILE (decl) |= SPEC_VOLATILE (spec);
-  DCL_PTR_RESTRICT (decl) |= SPEC_RESTRICT (spec);
-  if (DCL_PTR_ADDRSPACE (decl) && SPEC_ADDRSPACE (spec) &&
-    strcmp (DCL_PTR_ADDRSPACE (decl)->name, SPEC_ADDRSPACE (spec)->name))
-    werror (E_SYNTAX_ERROR, yytext);
-  if (SPEC_ADDRSPACE (spec))
-    DCL_PTR_ADDRSPACE (decl) = SPEC_ADDRSPACE (spec);
+  // for pointers, type qualifiers go in the declarator
+  if (DCL_TYPE (decl) != ARRAY && DCL_TYPE (decl) != FUNCTION)
+    {
+      DCL_PTR_CONST (decl) |= SPEC_CONST (spec);
+      DCL_PTR_VOLATILE (decl) |= SPEC_VOLATILE (spec);
+      DCL_PTR_RESTRICT (decl) |= SPEC_RESTRICT (spec);
+      if (DCL_PTR_ADDRSPACE (decl) && SPEC_ADDRSPACE (spec) &&
+        strcmp (DCL_PTR_ADDRSPACE (decl)->name, SPEC_ADDRSPACE (spec)->name))
+        werror (E_SYNTAX_ERROR, yytext);
+      if (SPEC_ADDRSPACE (spec))
+        DCL_PTR_ADDRSPACE (decl) = SPEC_ADDRSPACE (spec);
+
+      SPEC_CONST (spec) = 0;
+      SPEC_VOLATILE (spec) = 0;
+      SPEC_RESTRICT (spec) = 0;
+      SPEC_ADDRSPACE (spec) = 0;
+    }
 
   lnk = decl;
   while (lnk && !IS_SPEC (lnk->next))
@@ -1100,6 +1116,8 @@ getSize (sym_link * p)
     case EEPPOINTER:
     case FPOINTER:
     case CPOINTER:
+      if (!IS_FUNCPTR(p))
+        return (FARPTRSIZE);
     case FUNCTION:
       return (IFFUNC_ISBANKEDCALL (p) ? BFUNCPTRSIZE : FUNCPTRSIZE);
     case GPOINTER:
@@ -1799,6 +1817,12 @@ checkSClass (symbol *sym, int isProto)
       fprintf (stderr, "checkSClass: %s \n", sym->name);
     }
 
+  if (!sym->level && SPEC_SCLS (sym->etype) == S_AUTO)
+   {
+     werrorfl (sym->fileDef, sym->lineDef, E_AUTO_FILE_SCOPE);
+     SPEC_SCLS (sym->etype) = S_FIXED;
+   }
+
   /* type is literal can happen for enums change to auto */
   if (SPEC_SCLS (sym->etype) == S_LITERAL && !SPEC_ENUM (sym->etype))
     SPEC_SCLS (sym->etype) = S_AUTO;
@@ -1842,8 +1866,8 @@ checkSClass (symbol *sym, int isProto)
   if (!TARGET_PIC_LIKE)
 #endif
 
-    if (IS_ABSOLUTE (sym->etype))
-      SPEC_VOLATILE (sym->etype) = 1;
+  if (IS_ABSOLUTE (sym->etype))
+    SPEC_VOLATILE (sym->etype) = 1;
 
   if (TARGET_IS_MCS51 && IS_ABSOLUTE (sym->etype) && SPEC_SCLS (sym->etype) == S_SFR)
     {
@@ -2130,6 +2154,9 @@ cleanUpLevel (bucket ** table, long level)
 symbol *
 getAddrspace (sym_link *type)
 {
+  while(IS_ARRAY (type))
+    type = type->next;
+
   if (IS_DECL (type))
     return (DCL_PTR_ADDRSPACE (type));
   return (SPEC_ADDRSPACE (type));
@@ -2698,6 +2725,10 @@ compareType (sym_link *dest, sym_link *src)
       else
         return 1;
     }
+
+  if (SPEC_SHORT (dest) != SPEC_SHORT (src))
+    return -1;
+
   if (SPEC_LONG (dest) != SPEC_LONG (src))
     return -1;
 
@@ -4510,7 +4541,7 @@ newEnumType (symbol * enumlist)
   else if (min >= -128 && max <= 127)
     {
       SPEC_NOUN (type) = V_CHAR;
-	  SPEC_SIGN (type) = 1;
+      SPEC_SIGN (type) = 1;
     }
   else if (min >= 0 && max <= 65535)
     {

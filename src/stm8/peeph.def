@@ -97,6 +97,14 @@ replace restart {
 } if notVolatile(%1)
 
 replace restart {
+	exgw	x, y
+	ldw	x, y
+} by {
+	; peephole 5w replaced exgw-ldw by ldw.
+	ldw	y, x
+}
+
+replace restart {
 	ld	xl, a
 	srl	a
 	srlw	x
@@ -717,6 +725,14 @@ replace restart {
 }
 
 replace restart {
+	ldw	(%1, sp), x
+	tnz	(%1, sp)
+} by {
+	ldw	(%1, sp), x
+	; peephole 31c removed redundant tnz.
+}
+
+replace restart {
 	rlc	a
 	tnz	a
 } by {
@@ -806,7 +822,7 @@ replace restart {
 	cp	a, %2
 	jrc	%3
 	; peephole 42 removed redundant load of a from %1.
-} if notVolatile(%1), notUsed('c'), notUsed('z')
+} if notVolatile(%1), notUsed('n'), notUsed('z')
 
 replace restart {
 	ld	a, %1
@@ -818,7 +834,7 @@ replace restart {
 	cp	a, %2
 	jrslt	%3
 	; peephole 43 removed redundant load of a from %1.
-} if notVolatile(%1), notUsed('c'), notUsed('z')
+} if notVolatile(%1), notUsed('n'), notUsed('z')
 
 replace restart {
 	ld	a, %1
@@ -830,7 +846,7 @@ replace restart {
 	cp	a, %2
 	jrsle	%3
 	; peephole 44 removed redundant load of a from %1.
-} if notVolatile(%1), notUsed('c'), notUsed('z')
+} if notVolatile(%1), notUsed('n'), notUsed('z')
 
 replace restart {
 	ld	a, %1
@@ -842,7 +858,7 @@ replace restart {
 	cp	a, %2
 	jrule	%3
 	; peephole 45 removed redundant load of a from %1.
-} if notVolatile(%1), notUsed('c'), notUsed('z')
+} if notVolatile(%1), notUsed('n'), notUsed('z')
 
 replace restart {
 	ldw	x, %1
@@ -854,7 +870,7 @@ replace restart {
 	cpw	x, %2
 	jrc	%3
 	; peephole 46 removed redundant load of a from %1.
-} if notVolatile(%1), notUsed('c'), notUsed('z')
+} if notVolatile(%1), notUsed('n'), notUsed('z')
 
 replace restart {
 	ldw	x, %1
@@ -866,7 +882,7 @@ replace restart {
 	cpw	x, %2
 	jrslt	%3
 	; peephole 47 removed redundant load of a from %1.
-} if notVolatile(%1), notUsed('c'), notUsed('z')
+} if notVolatile(%1), notUsed('n'), notUsed('z')
 
 replace restart {
 	ldw	x, %1
@@ -878,7 +894,7 @@ replace restart {
 	cpw	x, %2
 	jrsle	%3
 	; peephole 48 removed redundant load of a from %1.
-} if notVolatile(%1), notUsed('c'), notUsed('z')
+} if notVolatile(%1), notUsed('n'), notUsed('z')
 
 replace restart {
 	ldw	x, %1
@@ -890,7 +906,7 @@ replace restart {
 	cpw	x, %2
 	jrule	%3
 	; peephole 49 removed redundant load of a from %1.
-} if notVolatile(%1), notUsed('c'), notUsed('z')
+} if notVolatile(%1), notUsed('n'), notUsed('z')
 
 replace restart {
 	ldw	x, %1
@@ -902,7 +918,7 @@ replace restart {
 	cpw	x, %2
 	jrnc	%3
 	; peephole 50 removed redundant load of a from %1.
-} if notVolatile(%1), notUsed('z')
+} if notVolatile(%1), notUsed('n'), notUsed('z')
 
 replace restart {
 	ldw	x, %1

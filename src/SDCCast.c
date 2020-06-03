@@ -991,18 +991,8 @@ processParms (ast * func, value * defParm, ast ** actParm, int *parmNumber,     
   /* the parameter type must be at least castable */
   if (compareType (defParm->type, (*actParm)->ftype) == 0)
     {
-      if (IS_STRUCT ((*actParm)->ftype))
-        {
-          if (IS_AST_VALUE (*actParm))
-            werrorfl ((*actParm)->filename, (*actParm)->lineno, E_STRUCT_AS_ARG, (*actParm)->opval.val->name);
-          else
-            werrorfl ((*actParm)->filename, (*actParm)->lineno, E_STRUCT_AS_ARG, "");
-        }
-      else
-        {
-          werror (E_INCOMPAT_TYPES);
-          printFromToType ((*actParm)->ftype, defParm->type);
-        }
+      werror (E_INCOMPAT_TYPES);
+      printFromToType ((*actParm)->ftype, defParm->type);
       return 1;
     }
 
@@ -1532,13 +1522,13 @@ gatherAutoInit (symbol * autoChain)
         resolveIvalSym (sym->ival, sym->type);
 
 #if 1
-      /* if we are PIC16 port,
+      /* if we are PIC14 or PIC16 port,
        * and this is a static,
        * and have initial value,
        * and not S_CODE, don't emit in gs segment,
        * but allow glue.c:pic16emitRegularMap to put symbol
        * in idata section */
-      if (TARGET_IS_PIC16 && IS_STATIC (sym->etype) && sym->ival && SPEC_SCLS (sym->etype) != S_CODE)
+      if (TARGET_PIC_LIKE && IS_STATIC (sym->etype) && sym->ival && SPEC_SCLS (sym->etype) != S_CODE)
         {
           SPEC_SCLS (sym->etype) = S_DATA;
           continue;
@@ -2224,7 +2214,7 @@ isConformingBody (ast * pbody, symbol * sym, ast * body)
     case NE_OP:
     case '?':
     case ':':
-    case SIZEOF:               /* evaluate wihout code generation */
+    case SIZEOF:               /* evaluate without code generation */
 
       if (IS_AST_SYM_VALUE (pbody->left) && isSymbolEqual (AST_SYMBOL (pbody->left), sym))
         return FALSE;
@@ -4545,7 +4535,7 @@ decorateType (ast *tree, RESULT_TYPE resultType)
       /*----------------------------*/
     case '!':
       /* can be pointer */
-      if (!IS_ARITHMETIC (LTYPE (tree)) && !IS_PTR (LTYPE (tree)) && !IS_ARRAY (LTYPE (tree)))
+      if (!IS_ARITHMETIC (LTYPE (tree)) && !IS_PTR (LTYPE (tree)) && !IS_FUNC (LTYPE (tree)) && !IS_ARRAY (LTYPE (tree)))
         {
           werrorfl (tree->filename, tree->lineno, E_UNARY_OP, tree->opval.op);
           goto errorTreeReturn;
@@ -4986,7 +4976,11 @@ decorateType (ast *tree, RESULT_TYPE resultType)
       /* else they should be promotable to one another */
       else
         {
-          if (!((IS_PTR (LTYPE (tree)) && IS_LITERAL (RTYPE (tree))) || (IS_PTR (RTYPE (tree)) && IS_LITERAL (LTYPE (tree)))))
+          if (!((IS_PTR (LTYPE (tree)) && IS_LITERAL (RTYPE (tree)))
+                || (IS_PTR (RTYPE (tree)) && IS_LITERAL (LTYPE (tree)))
+                || ((tree->opval.op == EQ_OP || tree->opval.op == NE_OP)
+                    && ((IS_FUNC (LTYPE (tree)) && IS_LITERAL (RTYPE (tree)) && !ullFromVal (valFromType (RTYPE (tree))))
+                        || (IS_FUNC (RTYPE (tree)) && IS_LITERAL (LTYPE (tree)) && !ullFromVal (valFromType (LTYPE (tree))))))))
 
             if (compareType (LTYPE (tree), RTYPE (tree)) == 0)
               {
@@ -6924,12 +6918,9 @@ addSymToBlock (symbol * sym, ast * tree)
 static void
 processRegParms (value * args, ast * body)
 {
-  while (args)
-    {
-      if (IS_REGPARM (args->etype))
-        addSymToBlock (args->sym, body);
-      args = args->next;
-    }
+  for (; args; args = args->next)
+    if (IS_REGPARM (args->etype) && args->sym)
+      addSymToBlock (args->sym, body);
 }
 
 /*-----------------------------------------------------------------*/
@@ -8561,17 +8552,17 @@ astErrors (ast * t)
  */
 
 static ast *
-offsetofOp_rec (sym_link * type, ast * snd, sym_link ** result_type)
+offsetofOp_rec (sym_link *type, ast *snd, sym_link **result_type)
 {
   /* make sure the type is complete and sane */
   checkTypeSanity (type, "(offsetofOp)");
 
   /* offsetof can only be applied to structs/unions */
-  if (!IS_STRUCT (type))
+  if (!IS_STRUCT (type) || !getSize (type))
     {
       werrorfl (snd->filename, snd->lineno, E_OFFSETOF_TYPE);
-      *result_type = NULL;
-      return NULL;
+      *result_type = 0;
+      return newAst_VALUE (valueFromLit (0));
     }
 
   /* offsetof(struct_type, symbol); */
@@ -8605,8 +8596,10 @@ offsetofOp_rec (sym_link * type, ast * snd, sym_link ** result_type)
 }
 
 ast *
-offsetofOp (sym_link * type, ast * snd)
+offsetofOp (sym_link *type, ast *snd)
 {
   sym_link *result_type;
+
   return offsetofOp_rec (type, snd, &result_type);
 }
+

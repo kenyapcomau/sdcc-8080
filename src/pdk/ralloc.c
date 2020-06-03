@@ -58,6 +58,8 @@ createStackSpil (symbol *sym)
   sym->usl.spillLoc = sloc;
   sym->stackSpil = 1;
 
+  addSetHead (&sloc->usl.itmpStack, sym);
+
   return sym;
 }
 
@@ -430,7 +432,7 @@ packRegisters (eBBlock * ebp)
          then mark this as rematerialisable   */
       if (ic->op == ADDRESS_OF && 
         IS_ITEMP (IC_RESULT (ic)) && bitVectnBitsOn (OP_DEFS (IC_RESULT (ic))) == 1 && !IS_PARM (IC_RESULT (ic)) /* The receiving of the parameter is not accounted for in DEFS */ &&
-        IS_TRUE_SYMOP (IC_LEFT (ic)) && !OP_SYMBOL (IC_LEFT (ic))->onStack)
+        IS_TRUE_SYMOP (IC_LEFT (ic)) /*&& !OP_SYMBOL (IC_LEFT (ic))->onStack*/)
         {
           OP_SYMBOL (IC_RESULT (ic))->remat = 1;
           OP_SYMBOL (IC_RESULT (ic))->rematiCode = ic;
@@ -514,7 +516,7 @@ packRegisters (eBBlock * ebp)
               if(ic->prev)
                 ic = ic->prev;
             }
-          else if (((use->op == SET_VALUE_AT_ADDRESS && !IS_BITVAR (getSpec (operandType (IC_LEFT (use)))) && !IS_BITVAR (getSpec (operandType (IC_RIGHT (use))))) ||
+          else if ((/*(use->op == SET_VALUE_AT_ADDRESS && !IS_BITVAR (getSpec (operandType (IC_LEFT (use)))) && !IS_BITVAR (getSpec (operandType (IC_RIGHT (use))))) || - resulted in pointer writes toring too few bytes*/
             use->op == CAST && (SPEC_USIGN (getSpec (operandType (IC_RIGHT (use)))) || operandSize (IC_RESULT (use)) <= operandSize (IC_RIGHT (use))) ||
             use->op == LEFT_OP || use->op == RIGHT_OP || use->op == '+' || use->op == '-' ||
             use->op == '&' || use->op == '|' || use->op == '^') &&
@@ -593,13 +595,13 @@ serialRegMark (eBBlock **ebbs, int count)
                   continue;
                 }
 
-              if (sym->usl.spillLoc && !sym->usl.spillLoc->_isparm) // I have no idea where these spill locations come from. Sometime two symbols even have the same spill location, whic tends to mess up stack allocation. THose that come from previous iterations in this loop would be okay, but those from outside are a problem.
+              if (sym->usl.spillLoc && !sym->usl.spillLoc->_isparm) // I have no idea where these spill locations come from. Sometime two symbols even have the same spill location, whic tends to mess up stack allocation. Those that come from previous iterations in this loop would be okay, but those from outside are a problem.
                 {
                   sym->usl.spillLoc = 0;
                   sym->isspilt = false;
                 }
 
-              if (sym->nRegs > 2 && ic->op == CALL)
+              if (sym->nRegs > 2 && ic->op == CALL) // To be allocated to stack due to the way (long) long return values are handled via a hidden pointer.
                 {
                   sym->for_newralloc = 0;
                   pdkSpillThis (sym);
@@ -729,12 +731,6 @@ pdk_assignRegisters (ebbIndex *ebbi)
 
   /* Invoke optimal register allocator */
   ic = pdk_ralloc2_cc (ebbi);
-
-  /* redo offsets for stacked automatic variables */
-  if (currFunc)
-    {
-      redoStackOffsets ();
-    }
 
   if (options.dump_i_code)
     {

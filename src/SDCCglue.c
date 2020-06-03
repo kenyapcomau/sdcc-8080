@@ -521,6 +521,12 @@ initValPointer (ast *expr)
       return valForStructElem (t, expr->right); 
     }
 
+  /* case 7. function name */
+  if (IS_AST_SYM_VALUE (expr) && IS_FUNC (expr->ftype))
+    {
+      return AST_VALUE (expr);
+    }
+
   return NULL;
 }
 
@@ -2293,7 +2299,7 @@ glue (void)
 
   if (!(asmFile = fopen (dbuf_c_str (&asmFileName), "w")))
     {
-      werror (E_FILE_OPEN_ERR, dbuf_c_str (&asmFileName));
+      werror (E_OUTPUT_FILE_OPEN_ERR, dbuf_c_str (&asmFileName), strerror (errno));
       dbuf_destroy (&asmFileName);
       exit (EXIT_FAILURE);
     }
@@ -2310,6 +2316,8 @@ glue (void)
     fprintf (asmFile, "\t.r3k\n");
   else if (TARGET_IS_EZ80_Z80)
     fprintf (asmFile, "\t.ez80\n");
+  else if (TARGET_IS_Z80N)
+    fprintf (asmFile, "\t.zxn\n");
   else if (TARGET_IS_I80)
     fprintf (asmFile, "\t.8080\n");
 

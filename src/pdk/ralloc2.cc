@@ -139,10 +139,10 @@ static bool Ainst_ok(const assignment &a, unsigned short int i, const G_t &G, co
   bool left_dir = IS_TRUE_SYMOP (left) || IS_ITEMP (left) && !(options.stackAuto || reentrant) && !left_in_A;
   bool right_dir = IS_TRUE_SYMOP (right) || IS_ITEMP (right) && !(options.stackAuto || reentrant) && !right_in_A;
 
-  if(result && IS_ITEMP(result) && OP_SYMBOL_CONST(result)->remat && !operand_in_reg(result, REG_A, ia, i, G) && !operand_in_reg(result, REG_P, ia, i, G))
+  if (ic->op == '=' || ic->op == DUMMY_READ_VOLATILE || ic->op == CAST || ic->op == GET_VALUE_AT_ADDRESS || ic->op == SET_VALUE_AT_ADDRESS)
     return(true);
 
-  if (ic->op == DUMMY_READ_VOLATILE || ic->op == '=')
+  if(result && IS_ITEMP(result) && OP_SYMBOL_CONST(result)->remat && !operand_in_reg(result, REG_A, ia, i, G) && !operand_in_reg(result, REG_P, ia, i, G))
     return(true);
 
   if ((ic->op == EQ_OP || ic->op == NE_OP) && dying_A &&
@@ -202,9 +202,6 @@ static bool Ainst_ok(const assignment &a, unsigned short int i, const G_t &G, co
     ic->op != '+' && ic->op != '-' && ic->op != UNARYMINUS && result_in_A && !operand_byte_in_reg(result, getSize(operandType(result)) - 1, REG_A, a, i, G))
     return(false);
 
-  if ((ic->op == GET_VALUE_AT_ADDRESS || ic->op == SET_VALUE_AT_ADDRESS) && (left_in_A || right_in_A))
-    return(false);
-
   if(dying_A)
     return(true);
 
@@ -224,22 +221,27 @@ static bool Pinst_ok(const assignment &a, unsigned short int i, const G_t &G, co
   const operand *right = IC_RIGHT(ic);
   const operand *result = IC_RESULT(ic);
 
-  bool result_in_P = operand_in_reg(result, REG_P, ia, i, G);
   bool left_in_P = operand_in_reg(left, REG_P, ia, i, G);
   bool right_in_P = operand_in_reg(right, REG_P, ia, i, G);
+  bool result_in_P = operand_in_reg(result, REG_P, ia, i, G);
 
   bool left_in_A = operand_in_reg(left, REG_A, ia, i, G);
   bool right_in_A = operand_in_reg(right, REG_A, ia, i, G);
+  bool result_in_A = operand_in_reg(result, REG_A, ia, i, G);
 
   const cfg_dying_t &dying = G[i].dying;
 
   bool dying_P = result_in_P || dying.find(ia.registers[REG_P][1]) != dying.end() || dying.find(ia.registers[REG_P][0]) != dying.end();
 
-  bool left_stack = IS_ITEMP (left) && (options.stackAuto || reentrant) && !left_in_A && !left_in_P;
-  bool right_stack = IS_ITEMP (right) && (options.stackAuto || reentrant) && !right_in_A && !right_in_P;
+  bool left_stack = (IS_ITEMP (left) || IS_PARM (left)) && (options.stackAuto || reentrant) && !left_in_A && !left_in_P;
+  bool right_stack = (IS_ITEMP (right) || IS_PARM (right)) && (options.stackAuto || reentrant) && !right_in_A && !right_in_P;
+  bool result_stack = (IS_ITEMP (result) || IS_PARM (result)) && (options.stackAuto || reentrant) && !result_in_A && !result_in_P;
 
-  if(result && IS_ITEMP(result) && OP_SYMBOL_CONST(result)->remat && !operand_in_reg(result, REG_A, ia, i, G) && !operand_in_reg(result, REG_P, ia, i, G))
+  if(result && IS_ITEMP(result) && OP_SYMBOL_CONST(result)->remat)
     return(true);
+
+  if(ic->op == IPUSH && left_stack)
+    return(false);
 
   // Arithmetic uses p internally for literal operands with multiple nonzero bytes.
   if ((ic->op == '+' || ic->op == '-' || ic->op == '!' || ic->op == '<' || ic->op == '>') && (IS_OP_LITERAL(left) || IS_OP_LITERAL(right)))
@@ -248,7 +250,7 @@ static bool Pinst_ok(const assignment &a, unsigned short int i, const G_t &G, co
       if ((ullFromVal(OP_VALUE_CONST (litop)) & 0x000000ffull) && (ullFromVal(OP_VALUE_CONST(litop)) & 0x0000ff00ull) && (ullFromVal(OP_VALUE_CONST (litop)) & 0x00ff0000ull) && (ullFromVal(OP_VALUE_CONST (litop)) & 0xff000000ull))
         return(false);
     }
-  if (ic->op == PCALL || ic->op == IPUSH)
+  if (ic->op == PCALL)
     return(false);
 
   if (ic->op == CALL && !dying_P)
@@ -257,8 +259,8 @@ static bool Pinst_ok(const assignment &a, unsigned short int i, const G_t &G, co
   if (ic->op == GET_VALUE_AT_ADDRESS && !dying_P && !(left_in_P && getSize(operandType(result)) == 1))
     return(false);
 
-  if ((ic->op == '+' || ic->op == '-' || ic->op == '^' || ic->op == '|' || ic->op == BITWISEAND) &&
-    (left_stack || right_stack) && (!dying_P || left_stack || right_stack))
+  if ((ic->op == '^' || ic->op == '|' || ic->op == BITWISEAND || ic->op == EQ_OP || ic->op == NE_OP) &&
+    (left_stack || right_stack || result_stack && !dying_P))
     return(false);
 
   return(true);
@@ -520,7 +522,7 @@ static void extra_ic_generated(iCode *ic)
   iCode *ifx;
 
   // - can only jump on nonzero result for decrement of register / direct variable.
-  if(ic->op == '-' && ic->next && ic->next->op == IFX && IC_TRUE(ic->next) && IC_COND (ic->next)->key == IC_RESULT(ic)->key)
+  if(ic->op == '-' && ic->next && ic->next->op == IFX && IC_COND (ic->next)->key == IC_RESULT(ic)->key)
     {
       ifx = ic->next;
 
@@ -534,9 +536,6 @@ static void extra_ic_generated(iCode *ic)
         return;
 
       if (!isOperandEqual (IC_RESULT(ic), IC_LEFT(ic)))
-        return;
-
-      if (getSize(operandType(IC_RESULT(ic))) > 2)
         return;
 
       ifx->generated = true;
@@ -595,7 +594,7 @@ static bool tree_dec_ralloc(T_t &T, G_t &G, const I_t &I, SI_t &SI)
   assignment_optimal = true;
   tree_dec_ralloc_nodes(T, find_root(T), G, I2, ac, &assignment_optimal);
 
-  /*const*/ assignment &winner = *(T[find_root(T)].assignments.begin());
+  const assignment &winner = *(T[find_root(T)].assignments.begin());
 
 #ifdef DEBUG_RALLOC_DEC
   std::cout << "Winner: ";
@@ -685,7 +684,15 @@ iCode *pdk_ralloc2_cc(ebbIndex *ebbi)
 
   pdkRegFix (ebbs, count);
 
-  doOverlays (ebbs, count);
+  if (reentrant)
+    {
+      chaitin_salloc(spilt_conflict_graph);
+
+      if(options.dump_graphs)
+        dump_scon(spilt_conflict_graph);
+    }
+  else
+    doOverlays (ebbs, count);
 
   return(ic);
 }

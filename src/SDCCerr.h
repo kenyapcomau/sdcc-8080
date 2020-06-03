@@ -276,7 +276,16 @@ enum {
   E_DECL_AFTER_STATEMENT_C99    = 247, /* declaration after statement requires ISO C99 or later */
   E_SHORTCALL_INVALID_VALUE     = 248, /* Invalid value for a __z88dk_shortcall specifier */
   E_DUPLICATE_PARAMTER_NAME     = 249, /* duplicate parameter name */
-
+  E_AUTO_FILE_SCOPE             = 250, /* auto in declaration at file scope */
+  E_U8_CHAR_C2X                 = 251, /* u8 character constant requires ISO C2X or later */
+  E_U8_CHAR_INVALID             = 252, /* invalid u8 character constant */
+  E_ATTRIBUTE_C2X               = 253, /* attribute requires ISO C2X or later */
+  E_COMPOUND_LITERALS_C99       = 254, /* compound literals require ISO C99 or later */
+  E_THREAD_LOCAL                = 255, /* thread-local storage is not implemented */
+  E_ENUM_COMMA_C99              = 256, /* trailing comma after enumerator list requires ISO C99 or later */
+  E_OUTPUT_FILE_OPEN_ERR        = 257, /* Failed to open output file for writing (with error message) */
+  E_INPUT_FILE_OPEN_ERR         = 258, /* Failed to open input file for readin (with error message) */
+  
   /* don't touch this! */
   NUMBER_OF_ERROR_MESSAGES             /* Number of error messages */
 };

@@ -358,22 +358,24 @@ allocIntoSeg (symbol *sym)
 {
   memmap *segment;
 
-  if (SPEC_ADDRSPACE (sym->etype))
+  const symbol *symbolspace = getAddrspace (sym->type);
+
+  if (symbolspace)
     {
       namedspacemap *nm;
       for (nm = namedspacemaps; nm; nm = nm->next)
-        if (!strcmp (nm->name, SPEC_ADDRSPACE (sym->etype)->name))
+        if (!strcmp (nm->name, symbolspace->name))
           break;
 
       if (!nm)
         {
           nm = Safe_alloc (sizeof (namedspacemap));
-          nm->name = Safe_alloc (strlen(SPEC_ADDRSPACE (sym->etype)->name) + 1);
-          strcpy (nm->name, SPEC_ADDRSPACE (sym->etype)->name);
-          nm->is_const = (SPEC_ADDRSPACE (sym->etype)->type && SPEC_CONST (SPEC_ADDRSPACE (sym->etype)->type));
+          nm->name = Safe_alloc (strlen(symbolspace->name) + 1);
+          strcpy (nm->name, symbolspace->name);
+          nm->is_const = (symbolspace->type && SPEC_CONST (symbolspace->type));
           nm->map = nm->is_const ?
-            allocMap (0, 1, 0, 0, 0, 1, options.code_loc, SPEC_ADDRSPACE (sym->etype)->name, 'C', CPOINTER) :
-            allocMap (0, 0, 0, 1, 0, 0, options.data_loc, SPEC_ADDRSPACE (sym->etype)->name, 'E', POINTER);
+            allocMap (0, 1, 0, 0, 0, 1, options.code_loc, symbolspace->name, 'C', CPOINTER) :
+            allocMap (0, 0, 0, 1, 0, 0, options.data_loc, symbolspace->name, 'E', POINTER);
           nm->next = namedspacemaps;
           namedspacemaps = nm;
         }
@@ -631,6 +633,12 @@ allocParms (value *val, bool smallc)
 
   for (lval = val; lval; lval = lval->next, pNum++)
     {
+      if (!lval->sym) // Can only happen if there was a syntax error in the declaration.
+        {
+          fatalError++;
+          return;
+        }
+        
       /* check the declaration */
       checkDecl (lval->sym, 0);
 
@@ -747,6 +755,9 @@ deallocParms (value * val)
 
   for (lval = val; lval; lval = lval->next)
     {
+      if (!lval->sym) /* Syntax error in declaration */
+        continue;
+
       /* unmark is myparm */
       lval->sym->ismyparm = 0;
 
@@ -815,7 +826,7 @@ allocLocal (symbol * sym)
     }
 
   /* if volatile then */
-  if (IS_VOLATILE (sym->etype))
+  if (IS_VOLATILE (sym->type))
     sym->allocreq = 1;
 
   /* this is automatic           */

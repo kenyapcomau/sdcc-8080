@@ -557,7 +557,7 @@ newOperand ()
 /* newiCode - create and return a new iCode entry initialised      */
 /*-----------------------------------------------------------------*/
 iCode *
-newiCode (int op, operand * left, operand * right)
+newiCode (int op, operand *left, operand *right)
 {
   iCode *ic;
 
@@ -572,6 +572,9 @@ newiCode (int op, operand * left, operand * right)
   ic->key = iCodeKey++;
   IC_LEFT (ic) = left;
   IC_RIGHT (ic) = right;
+
+  // Err on the save side for now, settign this to false later is up to later analysis.
+  ic->localEscapeAlive = true;
 
   return ic;
 }
@@ -1081,6 +1084,76 @@ isOperandOnStack (operand * op)
 
   return FALSE;
 }
+
+
+/*-------------------------------------------------------------------*/
+/* detachiCodeOperand - remove a specific operand position (left,    */
+/*                      right, result, etc) from an iCode and update */
+/*                      the uses & defs as appropriate.              */
+/*-------------------------------------------------------------------*/
+operand *
+detachiCodeOperand (operand **opp, iCode *ic)
+{
+  operand * op = *opp;
+  
+  if (IS_SYMOP (op))
+    {
+      if ((ic->op == IFX) || (ic->op == JUMPTABLE))
+        {
+          *opp = NULL;
+          bitVectUnSetBit (OP_USES (op), ic->key);
+        }
+      else
+        {
+          int uses = 0;
+          bool ispointerset = POINTER_SET (ic);
+
+          if (!ispointerset && (opp == &IC_RESULT (ic)))
+            bitVectUnSetBit (OP_DEFS (op), ic->key);
+          *opp = NULL;
+          if (ispointerset && (op == IC_RESULT (ic)))
+            uses++;
+          if (op == IC_LEFT (ic))
+            uses++;
+          if (op == IC_RIGHT (ic))
+            uses++;
+          if (uses == 0)
+            bitVectUnSetBit (OP_USES (op), ic->key);
+        }
+    }
+  else
+    *opp = NULL;
+  return op;
+}
+
+/*-------------------------------------------------------------------*/
+/* attachiCodeOperand - insert an operand to a specific operand      */
+/*                      position (left, right, result, etc) in an    */
+/*                      iCode and update the uses & defs as          */
+/*                      appropriate. Any previously existing operand */
+/*                      in that position will be detached first.     */
+/*-------------------------------------------------------------------*/
+void
+attachiCodeOperand (operand *newop, operand **opp, iCode *ic)
+{
+  /* If there is already an operand here, detach it first */
+  if (*opp)
+    detachiCodeOperand (opp, ic);
+
+  /* Insert new operand */
+  *opp = newop;
+  
+  /* Update defs/uses for new operand */
+  if (IS_SYMOP (newop))
+    {
+      if (opp == &IC_RESULT (ic) && !POINTER_SET (ic))
+        OP_DEFS (newop) = bitVectSetBit (OP_DEFS (newop), ic->key);
+      else
+        OP_USES (newop) = bitVectSetBit (OP_USES (newop), ic->key);
+    }
+}
+
+
 
 /*-----------------------------------------------------------------*/
 /* isOclsExpensive - will return true if accesses to an output     */
@@ -1669,7 +1742,7 @@ operandFromSymbol (symbol * sym)
       IS_AUTO (sym) &&                  /* is a local auto variable */
       !sym->addrtaken &&                /* whose address has not been taken */
       !sym->reqv &&                     /* does not already have a reg equivalence */
-      !IS_VOLATILE (sym->etype) &&      /* not declared as volatile */
+      !IS_VOLATILE (sym->type) &&       /* not declared as volatile */
       !sym->islbl &&                    /* not a label */
       !(TARGET_HC08_LIKE && (getSize (sym->type) > 2)) && /* will fit in regs */
       ok                                /* farspace check */
@@ -2792,8 +2865,12 @@ geniCodeBitwise (operand * left, operand * right, int oper, sym_link * resType)
 {
   iCode *ic;
 
-  left = geniCodeCast (resType, left, TRUE);
-  right = geniCodeCast (resType, right, TRUE);
+  /* Signedness doesn't matter for bit ops, so omit */
+  /* possible cast if that is the only difference */
+  if (compareType (resType, operandType (left)) != -2)
+    left = geniCodeCast (resType, left, TRUE);
+  if (compareType (resType, operandType (right)) != -2)
+    right = geniCodeCast (resType, right, TRUE);
 
   ic = newiCode (oper, left, right);
   IC_RESULT (ic) = newiTempOperand (resType, 0);
@@ -3362,7 +3439,7 @@ geniCodeDummyRead (operand * op)
 /* geniCodeSEParms - generate code for side effecting fcalls       */
 /*-----------------------------------------------------------------*/
 static void
-geniCodeSEParms (ast * parms, int lvl)
+geniCodeSEParms (ast *parms, int lvl)
 {
   if (!parms)
     return;
@@ -3457,8 +3534,8 @@ geniCodeParms (ast * parms, value * argVals, int *iArg, int *stack, sym_link * f
           ic = newiCode (IPUSH, pval, NULL);
           ic->parmPush = 1;
           /* update the stack adjustment */
-          *stack += getSize (IS_AGGREGATE (p) ? aggrToPtr (p, FALSE) : p);
-          if ((IFFUNC_ISSMALLC (ftype) || TARGET_PDK_LIKE) && !IS_AGGREGATE (p) && getSize (p) == 1) /* SmallC calling convention passes 8-bit paramters as 16-bit values. So does pdk due to stack alignment requirements */
+          *stack += getSize (IS_ARRAY (p) ? aggrToPtr (p, FALSE) : p);
+          if ((IFFUNC_ISSMALLC (ftype) || TARGET_PDK_LIKE) && !IS_AGGREGATE (p) && getSize (p) == 1) /* SmallC calling convention passes 8-bit parameters as 16-bit values. So does pdk due to stack alignment requirements */
             (*stack)++;
           ADDTOCHAIN (ic);
         }
@@ -4650,7 +4727,7 @@ opTypeToStr (OPTYPE op)
 
 
 operand *
-validateOpType (operand * op, const char *macro, const char *args, OPTYPE type, const char *file, unsigned line)
+validateOpType (operand *op, const char *macro, const char *args, OPTYPE type, const char *file, unsigned line)
 {
   if (op && op->type == type)
     {
@@ -4664,14 +4741,14 @@ validateOpType (operand * op, const char *macro, const char *args, OPTYPE type, 
 }
 
 const operand *
-validateOpTypeConst (const operand * op, const char *macro, const char *args, OPTYPE type, const char *file, unsigned line)
+validateOpTypeConst (const operand *op, const char *macro, const char *args, OPTYPE type, const char *file, unsigned line)
 {
   if (op && op->type == type)
     {
       return op;
     }
   fprintf (stderr,
-           "Internal error: validateOpType failed in %s(%s) @ %s:%u:"
+           "Internal error: validateOpTypeConst failed in %s(%s) @ %s:%u:"
            " expected %s, got %s\n", macro, args, file, line, opTypeToStr (type), op ? opTypeToStr (op->type) : "null op");
   exit (EXIT_FAILURE);
   return op;                    // never reached, makes compiler happy.
