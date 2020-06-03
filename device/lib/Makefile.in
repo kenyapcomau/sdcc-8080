@@ -70,6 +70,7 @@ OPT_DISABLE_XA51     = @OPT_DISABLE_XA51@
 OPT_DISABLE_Z80      = @OPT_DISABLE_Z80@
 OPT_DISABLE_Z180     = @OPT_DISABLE_Z180@
 OPT_DISABLE_EZ80_Z80 = @OPT_DISABLE_EZ80_Z80@
+OPT_DISABLE_Z80N     = @OPT_DISABLE_Z80N@
 OPT_DISABLE_R2K      = @OPT_DISABLE_R2K@
 OPT_DISABLE_R3KA     = @OPT_DISABLE_R3KA@
 OPT_DISABLE_TLCS90   = @OPT_DISABLE_TLCS90@
@@ -218,6 +219,10 @@ ifeq ($(OPT_DISABLE_EZ80_Z80), 0)
 TARGETS        += model-ez80_z80
 endif
 
+ifeq ($(OPT_DISABLE_Z80N), 0)
+TARGETS        += model-z80n
+endif
+
 ifeq ($(OPT_DISABLE_R2K), 0)
 TARGETS        += model-r2k
 endif
@@ -253,6 +258,7 @@ endif
 
 ifeq ($(OPT_DISABLE_PDK15), 0)
 TARGETS        += model-pdk15
+TARGETS        += model-pdk15-stack-auto
 endif
 
 # Compiling entire program or any subproject
@@ -357,6 +363,11 @@ model-ez80_z80:
 	  $(MAKE) MODELFLAGS="-mez80_z80" PORT=ez80_z80 objects-z80 OEXT=.o; \
 	fi
 
+model-z80n:
+	if grep '^z80$$' $(top_builddir)/ports.build > /dev/null; then \
+	  $(MAKE) MODELFLAGS="-mz80n" PORT=z80n objects-z80 OEXT=.o; \
+	fi
+
 model-r2k:
 	if grep '^z80$$' $(top_builddir)/ports.build > /dev/null; then \
 	  $(MAKE) MODELFLAGS="-mr2k" PORT=r2k objects-z80 OEXT=.o; \
@@ -417,11 +428,6 @@ model-stm8-large:
 	  $(MAKE) MODELFLAGS="-mstm8 --model-large" PORT=stm8-large objects-stm8; \
 	fi
 
-objects-stm8-large:
-	$(MAKE) build-dir
-	$(MAKE) port-specific-objects
-	$(MAKE) clean_intermediate
-
 model-pdk13:
 	if grep '^pdk$$' $(top_builddir)/ports.build > /dev/null; then \
 	  $(MAKE) MODELFLAGS="-mpdk13" PORT=pdk13 objects-pdk13; \
@@ -451,6 +457,11 @@ objects-pdk15:
 	$(MAKE) build-dir
 	$(MAKE) port-specific-objects
 	$(MAKE) clean_intermediate
+
+model-pdk15-stack-auto:
+	if grep '^pdk$$' $(top_builddir)/ports.build > /dev/null; then \
+	  $(MAKE) MODELFLAGS="-mpdk15 --stack-auto" PORT=pdk15-stack-auto objects-pdk15; \
+	fi
 
 model-pic16:
 	if grep '^pic16$$' $(top_builddir)/ports.build > /dev/null; then \
@@ -600,14 +611,14 @@ clean_intermediate-pic14:
 install: all installdirs
 	[ ! -d "$(BUILDDIR)" ] || $(CP_U) -r $(BUILDDIR)/* $(sdcc_libdir)
 	$(CP_U) -r $(MODELS) $(srcdir)/mcs51 $(srcdir)/ds390 $(srcdir)/ds400 \
-	                     $(srcdir)/z80 $(srcdir)/z180 $(srcdir)/ez80_z80 $(srcdir)/r2k $(srcdir)/r3ka $(srcdir)/tlcs90 $(srcdir)/gbz80 \
+	                     $(srcdir)/z80 $(srcdir)/z180 $(srcdir)/ez80_z80 $(srcdir)/z80n $(srcdir)/r2k $(srcdir)/r3ka $(srcdir)/tlcs90 $(srcdir)/gbz80 \
 	                     $(srcdir)/hc08 $(srcdir)/s08 \
 	                     $(srcdir)/stm8 \
 	                     $(srcdir)/pdk13 $(srcdir)/pdk14 $(srcdir)/pdk15 \
 	                     $(srcdir)/pic14 $(srcdir)/pic16 $(srcdir)/*.c $(sdcc_libdir)/src
-	$(CP_U) -r $(MODELS) mcs51 ds390 ds400 z80 z180 ez80_z80 r2k r3ka tlcs90 gbz80 hc08 s08 stm8 pdk13 pdk14 pdk15 $(sdcc_libdir)/src
+	$(CP_U) -r $(MODELS) mcs51 ds390 ds400 z80 z180 ez80_z80 z80n r2k r3ka tlcs90 gbz80 hc08 s08 stm8 pdk13 pdk14 pdk15 $(sdcc_libdir)/src
 
-	for src in $(MODELS) ds390 ds400 z80 z180 ez80_z80 r2k r3ka tlcs90 gbz80 hc08 s08 stm8 pdk13 pdk14 pdk15 pic14 pic16; do \
+	for src in $(MODELS) ds390 ds400 z80 z180 ez80_z80 z80n r2k r3ka tlcs90 gbz80 hc08 s08 stm8 pdk13 pdk14 pdk15 pic14 pic16; do \
 	  find $(sdcc_libdir)/src/$$src -depth \
 	    \( -name '*.rel' -o -name '*.dump*' -o -name '*.sym' -o -name '*.o' -o -name '*.lib' -o \
 	    -name '*.lst' -o -name '*.asm' -o -name '.svn' -o -name 'autom4te.cache' -o \

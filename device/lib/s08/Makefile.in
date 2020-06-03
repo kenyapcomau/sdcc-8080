@@ -6,7 +6,7 @@ top_builddir = @top_builddir@
 
 LIB_TYPE     = @LIB_TYPE@
 
-SCC = $(top_builddir)/bin/sdcc -ms08
+SCC = $(top_builddir)/bin/sdcc -ms08 --max-allocs-per-node 25000
 SAS = $(top_builddir)/bin/sdas6808
 
 # override PORTDIR defined by super (parent) makefile
@@ -50,12 +50,13 @@ HC08_SDCC = $(COMMON_SDCC) \
   _memmove.c \
   _heap.c \
   sprintf.c \
-  vprintf.c
+  vprintf.c \
+  atomic_flag_clear.c
 
 HC08SOURCES = $(addprefix ../,$(HC08_FLOAT) $(HC08_INT) $(HC08_LONG) $(HC08_LONGLONG) $(HC08_SDCC))
 HC08OBJECTS = $(patsubst %.c,%.rel,$(HC08_FLOAT) $(HC08_INT) $(HC08_LONG) $(HC08_LONGLONG) $(HC08_SDCC))
 
-OBJ = _ret.rel _mulint.rel _setjmp.rel
+OBJ = _ret.rel _mulint.rel _setjmp.rel atomic_flag_test_and_set.rel
 
 LIB = s08.lib
 CC = $(SCC)

@@ -2,7 +2,7 @@
    string.h - ISO header for string library functions
 
    Copyright (C) 1998, Sandeep Dutta
-   Copyright (C) 2009-2011, Philipp Klaus Krause pkk@spth.de
+   Copyright (C) 2009-2019, Philipp Klaus Krause pkk@spth.de
 
    This library is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -58,7 +58,7 @@ typedef int errno_t;
 #define __SDCC_BROKEN_STRING_FUNCTIONS
 #endif
 
-/* The function prototypes are ordered as in the ISO C99 standard. */
+/* The function prototypes are ordered as in the ISO C11 standard. */
 
 /* Todo: fix the "restrict" stuff for C99 compliance. */
 
@@ -70,24 +70,28 @@ extern void *memmove (void *dest, const void *src, size_t n) __preserves_regs(iy
 #else
 extern void *memmove (void *dest, const void *src, size_t n);
 #endif
-#if defined(__SDCC_z80) || defined(__SDCC_z180) || defined(__SDCC_r2k) || defined(__SDCC_r3ka) || defined(__SDCC_tlcs90) || defined (__SDCC_ez80_z80)
+#if defined(__SDCC_z80) || defined(__SDCC_z180) || defined(__SDCC_r2k) || defined(__SDCC_r3ka) || defined(__SDCC_tlcs90) || defined (__SDCC_ez80_z80) || defined (__SDCC_z80n)
 extern char *strcpy (char * /*restrict*/ dest, const char * /*restrict*/ src) __preserves_regs(iyl, iyh);
 #else
 extern char *strcpy (char * /*restrict*/ dest, const char * /*restrict*/ src);
 #endif
-extern char *strncpy(char * /*restrict*/ dest, const char * /*restrict*/ src, size_t n);
+extern char *strncpy (char * /*restrict*/ dest, const char * /*restrict*/ src, size_t n);
 
 /* Concatenation functions: */
 extern char *strcat (char * /*restrict*/ dest, const char * /*restrict*/ src);
-extern char *strncat(char * /*restrict*/ dest, const char * /*restrict*/ src, size_t n);
+extern char *strncat (char * /*restrict*/ dest, const char * /*restrict*/ src, size_t n);
+
+/* C2X Duplication functions */
+extern char *strdup (const char *s);
+extern char *strndup (const char *s, size_t n);
 
 /* Comparison functions: */
 extern int memcmp (const void *s1, const void *s2, size_t n);
 extern int strcmp (const char *s1, const char *s2);
 #define strcoll(s1, s2) strcmp(s1, s2)
 /*int strcoll(const char *s1, const char *s2) {return strcmp(s1, s2);}*/
-extern int strncmp(const char *s1, const char *s2, size_t n);
-extern size_t strxfrm(char *dest, const char *src, size_t n);
+extern int strncmp (const char *s1, const char *s2, size_t n);
+extern size_t strxfrm (char *dest, const char *src, size_t n);
 
 /* Search functions: */
 extern void *memchr (const void *s, int c, size_t n);
@@ -115,7 +119,7 @@ extern void *memset (void *s, int c, size_t n);
 #endif
 
 /* extern char *strerror(int errnum); */
-#if defined(__SDCC_z80) || defined(__SDCC_z180) || defined(__SDCC_tlcs90) || defined (__SDCC_ez80_z80)
+#if defined(__SDCC_z80) || defined(__SDCC_z180) || defined(__SDCC_tlcs90) || defined (__SDCC_ez80_z80) || defined (__SDCC_z80n)
 extern size_t strlen (const char *s) __preserves_regs(d, e, iyl, iyh);
 #else
 extern size_t strlen (const char *s);
@@ -125,7 +129,7 @@ extern size_t strlen (const char *s);
 extern void __xdata * memcpyx(void __xdata *, void __xdata *, int) __naked;
 #endif
 
-#if defined(__SDCC_z80) || defined(__SDCC_z180) || defined(__SDCC_r2k) || defined(__SDCC_r3ka) || defined (__SDCC_ez80_z80)
+#if defined(__SDCC_z80) || defined(__SDCC_z180) || defined(__SDCC_r2k) || defined(__SDCC_r3ka) || defined (__SDCC_ez80_z80) || defined (__SDCC_z80n)
 #define memcpy(dst, src, n) __builtin_memcpy(dst, src, n)
 #define strcpy(dst, src) __builtin_strcpy(dst, src)
 #define strncpy(dst, src, n) __builtin_strncpy(dst, src, n)
