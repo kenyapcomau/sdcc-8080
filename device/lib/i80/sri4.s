@@ -1,9 +1,9 @@
 	.area	_CODE
-	.globl	__sri4
+	.globl	sri4
 
 	.8080
 
-__sri4:
+sri4:
 
 ; Shift 32 bits signed right
 ;	de,hl = value and return

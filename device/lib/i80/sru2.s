@@ -1,9 +1,9 @@
 	.area	_CODE
-	.globl	__sru2
+	.globl	sru2
 
 	.8080
 
-__sru2:
+sru2:
 
 ; Shift 16 bits unsigned right
 ;	hl = value and return

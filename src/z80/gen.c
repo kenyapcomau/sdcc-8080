@@ -7570,7 +7570,7 @@ genCmp (operand * left, operand * right, operand * result, iCode * ifx, int sign
 
           if (sign)             /* Map signed operands to unsigned ones. This pre-subtraction workaround to lack of signed comparison is cheaper than the post-subtraction one at fix. */
             {
-              if (size == 2 && !(IS_GB || !ifx && requiresHL(AOP(result)) && AOP_TYPE (result) != AOP_REG) && isPairDead (PAIR_HL, ic) && (isPairDead (PAIR_DE, ic) || isPairDead (PAIR_BC, ic)) && (getPairId (AOP (left)) == PAIR_HL || IS_RAB && (AOP_TYPE (left) == AOP_STK || AOP_TYPE (left) == AOP_EXSTK)))
+              if (size == 2 && !(IS_GB_I80 || !ifx && requiresHL(AOP(result)) && AOP_TYPE (result) != AOP_REG) && isPairDead (PAIR_HL, ic) && (isPairDead (PAIR_DE, ic) || isPairDead (PAIR_BC, ic)) && (getPairId (AOP (left)) == PAIR_HL || IS_RAB && (AOP_TYPE (left) == AOP_STK || AOP_TYPE (left) == AOP_EXSTK)))
                 {
                   PAIR_ID litpair = (isPairDead (PAIR_DE, ic) ? PAIR_DE : PAIR_BC);
                   fetchPair (PAIR_HL, AOP (left));
@@ -7971,7 +7971,7 @@ gencjneshort (operand *left, operand *right, symbol *lbl, const iCode *ic)
               left = t;
             }
 
-          if (!IS_GB && isPairDead (PAIR_HL, ic) &&
+          if (!IS_GB_I80 && isPairDead (PAIR_HL, ic) &&
             (aopInReg (left->aop, offset, HL_IDX) && (aopInReg (right->aop, offset, BC_IDX) || aopInReg (right->aop, offset, DE_IDX) || getFreePairId (ic) != PAIR_INVALID) ||
             size == 1 && (aopInReg (right->aop, offset, BC_IDX) || aopInReg (right->aop, offset, DE_IDX))))
             {
@@ -7979,7 +7979,7 @@ gencjneshort (operand *left, operand *right, symbol *lbl, const iCode *ic)
               if (pair == PAIR_INVALID)
                 pair = getFreePairId (ic);
 
-              fetchPairLong (PAIR_HL, left->aop, ic, offset);
+	      fetchPairLong (PAIR_HL, left->aop, ic, offset);
               fetchPairLong (pair, right->aop, 0, offset);
               emit3 (A_CP, ASMOP_A, ASMOP_A);
               emit2 ("sbc hl, %s", _pairs[pair].name);
@@ -10215,7 +10215,7 @@ genI80RightShift (const iCode * ic)
   sym_link *retype;
   bool is_signed;
   int size;
-  char shiftfun[] = "_sriNNNNNN";
+  char shiftfun[] = "sriNNNNNN";
 
   right = IC_RIGHT (ic);
   left = IC_LEFT (ic);
@@ -10232,7 +10232,7 @@ genI80RightShift (const iCode * ic)
 
   /* if the shift count is known then do it
      as efficiently as possible */
-  if (shCount >= size * 8 && AOP_TYPE (right) == AOP_LIT && getSize (operandType (result)) <= 2)
+  if (AOP_TYPE (right) == AOP_LIT && getSize (operandType (result)) <= 2)
     {
       emitDebug ("; genI80RightShiftLiteral");
       genI80RightShiftLiteral (left, right, result, ic, is_signed);
@@ -10262,7 +10262,7 @@ genI80RightShift (const iCode * ic)
   spillPair (PAIR_BC);
   fetchPair (PAIR_BC, AOP (right));
   emit2 ("push af");
-  sprintf(shiftfun, "_sr%c%d", (is_signed ? 'i' : 'u'), size);
+  sprintf(shiftfun, "sr%c%d", (is_signed ? 'i' : 'u'), size);
   emit2 ("call %s", shiftfun);
   emit2 ("pop af");
   /* How to indicate result is now in HL? Like this? */
@@ -11540,7 +11540,7 @@ genIfx (iCode *ic, iCode *popIc)
   aopOp (cond, ic, FALSE, TRUE);
 
   /* Special case: Condition is bool */
-  if (IS_BOOL (operandType (cond)) && !aopInReg (cond->aop, 0, A_IDX))
+  if (!IS_I80 && IS_BOOL (operandType (cond)) && !aopInReg (cond->aop, 0, A_IDX))
     {
       if (!regalloc_dry_run)
         {
